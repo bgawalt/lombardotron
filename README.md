@@ -39,3 +39,38 @@ I downloaded a few into a folder called `data/` that I told git to ignore.
 The column translations are available at:
 
 https://nflreadr.nflverse.com/articles/dictionary_player_stats.html
+
+### Team Changes
+
+How often do players change team in a regular+post season? Some guys as much
+as five times:
+
+```
+Mike Evans (00-0031408): 5
+Tyreek Hill (00-0033040): 5
+JuJu Smith-Schuster (00-0033857): 5
+Courtland Sutton (00-0034348): 5
+Devin Singletary (00-0035250): 5
+Michael Pittman (00-0036252): 5
+Ja'Marr Chase (00-0036900): 5
+Peyton Hendershot (00-0037569): 5
+Tyler Lockett (00-0032211): 4
+Demarcus Robinson (00-0032775): 4
+George Kittle (00-0033288): 4
+Samaje Perine (00-0033526): 4
+Austin Ekeler (00-0033699): 4
+Evan Engram (00-0033881): 4
+River Cracraft (00-0034054): 4
+Alec Ingold (00-0035125): 4
+Terry McLaurin (00-0035659): 4
+Marquise Brown (00-0035662): 4
+Brandon Aiyuk (00-0036261): 4
+Chase Claypool (00-0036326): 4
+
+Num Teams: Num Players
+1: 1359
+2: 206
+3: 61
+4: 17
+5: 8
+```
