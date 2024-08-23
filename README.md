@@ -78,6 +78,8 @@ Num Teams: Num Players
 About one in six players get traded at least once. So not a totally ignorable
 corner case.
 
+[Commit with this code: 3cfbe72](https://github.com/bgawalt/lombardotron/blob/3cfbe7256c98c3e22598538eb114b79a2862df5f/lombardotron.py)
+
 ### Rookies and Retirement
 
 How many players are in both seasons? Either season? Just '22 or just '23?
@@ -94,3 +96,5 @@ Just '23: 425
 So of the 1614 players in '24 I'm gonna rank for the draft, I should expect
 440 of them to be rookies, where I can't guess their quality from their previous
 NFL stats.
+
+[Commit with this code: af9dd8c](https://github.com/bgawalt/lombardotron/blob/af9dd8c38c797e504103d775180cc4613190632d/lombardotron.py)
