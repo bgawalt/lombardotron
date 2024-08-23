@@ -10,6 +10,9 @@ forest anyway.
 
 ## Python environment
 
+Here are the actual pip commands I have run in this project's virtual
+environment:
+
 ```shell
 $ pip3 install -U scikit-learn
 ```
