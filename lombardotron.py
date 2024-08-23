@@ -12,49 +12,34 @@ _OFF_2023 = "./data/player_stats_season_2023.csv"
 
 class SeasonStats:
 
-    def __init__(self, off_file: str, def_file: str, season_type_filter: str):
-        player_id_counts = {}
-        player_id_name = {}
+    def __init__(self, off_file: str, def_file: str):
+        player_ids = set([])
         with open(off_file, 'rt') as infile:
             for row in csv.DictReader(infile):
-                if row['season_type'] != season_type_filter:
-                    continue
-                player = row['player_id']
-                name = row['player_display_name']
-                if player in player_id_name:
-                    if player_id_name[player] != name:
-                        raise ValueError(
-                            f'{player}, {name}, {player_id_name[player]}')
-                else:
-                    player_id_name[player] = name
-                player_id_counts[player] = player_id_counts.get(player, 0) + 1
+                player_ids.add(row['player_id'])
         with open(def_file, 'rt') as infile:
-            for row in csv.DictReader(infile):                    
-                if row['season_type'] != season_type_filter:
-                    continue
-                player = row['player_id']
-                player_id_counts[player] = player_id_counts.get(player, 0) + 1
-                name = row['player_display_name']
-                if player in player_id_name:
-                    if player_id_name[player] != name:
-                        raise ValueError(
-                            f'{player}, {name}, {player_id_name[player]}')
-                else:
-                    player_id_name[player] = name
-        for p, c in sorted(player_id_counts.items(),
-                           key=lambda x: x[1], reverse=True)[:20]:
-            n = player_id_name[p]
-            print(f'{n} ({p}): {c}')
-        count_counts = {}
-        for c in player_id_counts.values():
-            count_counts[c] = count_counts.get(c, 0) + 1
-        print('\n')
-        for c in sorted(count_counts.keys()):
-            print(f'{c}: {count_counts[c]}')
+            for row in csv.DictReader(infile):
+                player_ids.add(row['player_id'])
+        self._player_ids = tuple(player_ids)
+
+    @property
+    def player_ids(self):
+        return self._player_ids
 
 
 def main():
-    SeasonStats(_OFF_2022, _DEF_2022, "REG+POST")
+    s22 = SeasonStats(_OFF_2022, _DEF_2022)
+    s23 = SeasonStats(_OFF_2023, _DEF_2023)
+    p22 = set(s22.player_ids)
+    p23 = set(s23.player_ids)
+    both = p22.intersection(p23)
+    either = p22.union(p23)
+    print(f"'22: {len(p22)}")
+    print(f"'23: {len(p23)}")
+    print(f"Both: {len(both)}")
+    print(f"Either: {len(either)}")
+    print(f"Just '22: {len(p22) - len(both)}")
+    print(f"Just '23: {len(p23) - len(both)}")
 
 
 if __name__ == "__main__":

@@ -42,8 +42,8 @@ https://nflreadr.nflverse.com/articles/dictionary_player_stats.html
 
 ### Team Changes
 
-How often do players change team in a regular+post season? Some guys as much
-as five times:
+How often do players change teams in a regular+post season? Some guys see as
+many as five different teams:
 
 ```
 Mike Evans (00-0031408): 5
@@ -74,3 +74,23 @@ Num Teams: Num Players
 4: 17
 5: 8
 ```
+
+About one in six players get traded at least once. So not a totally ignorable
+corner case.
+
+### Rookies and Retirement
+
+How many players are in both seasons? Either season? Just '22 or just '23?
+
+```
+'22: 1651
+'23: 1614
+Both: 1189
+Either: 2076
+Just '22: 462
+Just '23: 425
+```
+
+So of the 1614 players in '24 I'm gonna rank for the draft, I should expect
+440 of them to be rookies, where I can't guess their quality from their previous
+NFL stats.
