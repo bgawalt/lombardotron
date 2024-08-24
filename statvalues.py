@@ -110,7 +110,7 @@ PREDICTORS = (
     "def_tackle_assists",
     "def_tackles",
     "def_tackles_for_loss_yards",
-    "def_games",  # WARNING!! MUST MAP!!
+    "def_games",  # WARNING!! MUST MAP!! Manually edit CSVs.
     "fg_att",
     "fg_blocked",
     "fg_blocked_distance",
@@ -133,7 +133,7 @@ PREDICTORS = (
     "fg_missed_distance",
     "fg_missed_list",
     "fg_pct",
-    "kick_games",  # WARNING!! MUST MAP!
+    "kck_games",  # WARNING!! MUST MAP! Manually edit CSVs.
     "gwfg_att",
     "gwfg_blocked",
     "gwfg_distance_list",
