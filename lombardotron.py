@@ -1,7 +1,8 @@
+import collections
 import csv
-import random
 
 import statvalues
+
 
 _DEF_2022 = "./data/player_stats_def_season_2022.csv"
 _DEF_2023 = "./data/player_stats_def_season_2023.csv"
@@ -20,84 +21,82 @@ _NAME_COLUMN = "player_name"
 _SEASON_TYPE_COLUMN = "season_type"
 
 
-class SeasonStats:
+def empty_float(s: str) -> float:
+  """Parse ASCII to a float, and empty strings count as zero."""
+  if not s:
+    return 0
+  return float(s)
 
-  def __init__(self, season: tuple[str, str, str], season_type: str):        
-    off_file, def_file, kck_file = season
-    kck_teams = {}  # {player id : {team : num_games}}
-    off_team = {}  # {player_id: team}
-    def_teams = {}  # {player id : {team : num_games}}
-    names = {} # {player id : name}
-    with open(kck_file, "rt") as infile:
-      for row in csv.DictReader(infile):
-        if row[_SEASON_TYPE_COLUMN] != season_type:
+
+class PlayerStats:
+  """Stats for one player, for one season."""
+
+  def __init__(self, pid: str, name: str):
+    self._pid = pid
+    self._name = name
+    # Each of the following are {team: game count}
+    self._off_games = {}
+    self._def_games = {}
+    self._kck_games = {}
+    self._stats = collections.defaultdict(float)
+
+  def add_row(self, row: dict[str, str]):
+    team = None
+    if "recent_team" in row:
+      team = row["recent_team"]
+    elif "team" in row:
+      team = row["team"]
+    else:
+      raise ValueError(f"No team for {self._pid}")
+    if "games" in row:
+      if team in self._off_games:
+        raise ValueError(f"Multiple insertion, offense, {team}, {self._pid}")
+      self._off_games[team] = row["games"]
+    elif "def_games" in row:
+      if team in self._def_games:
+        raise ValueError(f"Multiple insertion, defense, {team}, {self._pid}")
+      self._def_games[team] = row["def_games"]
+    elif "kck_games" in row:
+      if team in self._kck_games:
+        raise ValueError(f"Multiple insertion, kicking, {team}, {self._pid}")
+      self._kck_games[team] = row["kck_games"]
+    else:
+      raise ValueError(f"No games count for {self._pid}")
+    for stat in statvalues.ALL_FEATURES:
+      if stat not in row:
+        continue
+      self._stats[stat] += empty_float(row[stat])
+
+
+class SeasonStats:
+  """Stats for the full league of players, for one season."""
+
+  def __init__(self, season: tuple[str, str, str], season_type: str):
+    self._players: dict[str, PlayerStats] = {}
+    for filename in season:
+      self._add_file(filename=filename, season_type=season_type)
+
+  def _add_file(self, filename: str, season_type: str):
+    with open(filename, 'rt') as infile:
+      for i, row in enumerate(csv.DictReader(infile)):
+        if row.get("season_type") != season_type:
           continue
         pid = row[_PID_COLUMN]
         name = row[_NAME_COLUMN]
-        if pid not in names:
-          names[pid] = name
-        elif pid in names and names[pid] != name:
-          raise ValueError(
-            f'Repeat names for {pid}: {name}, {names[pid]}')
-        if pid not in kck_teams:
-          kck_teams[pid] = {}
-        team = row["team"]
-        num_games = int(row["kck_games"])
-        kck_teams[pid][team] = kck_teams[pid].get(team, 0) + num_games
-    with open(off_file, "rt") as infile:
-      for row in csv.DictReader(infile):
-        if row[_SEASON_TYPE_COLUMN] != season_type:
-            continue
-        pid = row[_PID_COLUMN]
-        name = row[_NAME_COLUMN]
-        if pid not in names:
-            names[pid] = name
-        elif pid in names and names[pid] != name:
-            raise ValueError(
-                f'Repeat names for {pid}: {name}, {names[pid]}')
-        if pid in off_team:
-            raise ValueError(f"Wait!! {pid} is in offense twice!!")
-        off_team[pid] = row["recent_team"]
-    with open(def_file, "rt") as infile:
-      for row in csv.DictReader(infile):
-        if row[_SEASON_TYPE_COLUMN] != season_type:
-          continue
-        pid = row[_PID_COLUMN]
-        name = row[_NAME_COLUMN]
-        if pid not in def_teams:
-          def_teams[pid] = {}
-        if pid not in names:
-          names[pid] = name
-        elif pid in names and names[pid] != name:
-          raise ValueError(f'Repeat names for {pid}: {name}, {names[pid]}')
-        team = row["team"]
-        num_games = int(row["def_games"])
-        def_teams[pid][team] = def_teams[pid].get(team, 0) + num_games
-    self._player_ids = tuple(
-      set(list(kck_teams.keys()) + 
-          list(off_team.keys()) +
-          list(def_teams.keys())))
-    self._kckteams = kck_teams
-    self._offteams = off_team
-    self._defteams = def_teams
-    self._names = names
+        if pid not in self._players:
+          self._players[pid] = PlayerStats(pid=pid, name=name)
+        self._players[pid].add_row(row)
 
   @property
   def player_ids(self):
-    return self._player_ids
+    return self._players.keys()
 
 
 def main():
   s22 = SeasonStats(_SEASON_2022, "REG+POST")
-  all_teams = set([])
-  for pid in s22.player_ids:
-    for team in s22._defteams.get(pid, {}).keys():
-      all_teams.add(team)
-    for team in s22._kckteams.get(pid, {}).keys():
-      all_teams.add(team)
-    all_teams.add(s22._offteams.get(pid, ""))
-  for t in sorted(all_teams):
-    print(f'\t"{t}",')
+  print(len(s22.player_ids))
+  s23 = SeasonStats(_SEASON_2022, "REG")
+  print(len(s23.player_ids))
 
 
 if __name__ == "__main__":
