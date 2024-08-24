@@ -98,3 +98,32 @@ So of the 1614 players in '24 I'm gonna rank for the draft, I should expect
 NFL stats.
 
 [Commit with this code: af9dd8c](https://github.com/bgawalt/lombardotron/blob/af9dd8c38c797e504103d775180cc4613190632d/lombardotron.py)
+
+### Fantasy Points
+
+Here's the 10 lowest- and 10 highest-scoring players in the 2023-24 season,
+according to my IDP league's scoring system:
+
+```
+T.Boyle (00-0034177):   -2.9
+M.Dickson (00-0034160): -1.8
+C.Beathard (00-0033936):        -1.0
+C.Henne (00-0026197):   -0.5
+N.Sudfeld (00-0032792): -0.4
+J.Gillan (00-0035042):  -0.3
+J.Gordon (00-0029664):  0.0
+B.Anger (00-0029692):   0.0
+D.Bakhtiari (00-0030074):       0.0
+T.Gentry (00-0033633):  0.0
+...
+J.Jacobs (00-0035700):  331.3
+D.Adams (00-0031381):   337.0
+T.Hill (00-0033040):    347.2
+J.Burrow (00-0036442):  350.7
+C.McCaffrey (00-0033280):       356.4
+J.Jefferson (00-0036322):       371.7
+J.Hurts (00-0036389):   381.0
+A.Ekeler (00-0033699):  382.7
+J.Allen (00-0034857):   403.3
+P.Mahomes (00-0033873): 418.9
+```

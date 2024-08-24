@@ -66,6 +66,12 @@ class PlayerStats:
       if stat not in row:
         continue
       self._stats[stat] += empty_float(row[stat])
+  
+  def score(self) -> float:
+    return sum(
+      pts * self._stats[stat]
+      for stat, pts in statvalues.FANTASY_POINTS.items()
+    )
 
 
 class SeasonStats:
@@ -97,6 +103,13 @@ def main():
   print(len(s22.player_ids))
   s23 = SeasonStats(_SEASON_2022, "REG")
   print(len(s23.player_ids))
+
+  p23 = list(sorted(s23._players.values(), key=lambda p: p.score()))
+  for p in p23[:10]:
+    print(f'{p._name} ({p._pid}):\t{p.score():0.1f}')
+  print('...')
+  for p in p23[-10:]:
+    print(f'{p._name} ({p._pid}):\t{p.score():0.1f}')
 
 
 if __name__ == "__main__":
