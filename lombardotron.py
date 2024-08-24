@@ -123,7 +123,7 @@ def main():
   print(len(list(p for p in p23 if p.score() <= 0)))
   print("\n")
   for p in p23:
-    if "/" in p.roles():
+    if "/" in p.roles() or not p.roles():
       print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
 
 
