@@ -19,9 +19,10 @@ _PID_COLUMN = "player_id"
 _NAME_COLUMN = "player_name"
 _SEASON_TYPE_COLUMN = "season_type"
 
+
 class SeasonStats:
 
-    def __init__(self, season: tuple[str, str, str], season_type: str):
+    def __init__(self, season: tuple[str, str, str], season_type: str):        
         off_file, def_file, kck_file = season
         kck_teams = {}  # {player id : {team : num_games}}
         off_team = {}  # {player_id: team}
@@ -36,7 +37,8 @@ class SeasonStats:
                 if pid not in names:
                     names[pid] = name
                 elif pid in names and names[pid] != name:
-                    raise ValueError(f'Repeat names for {pid}: {name}, {names[pid]}')
+                    raise ValueError(
+                        f'Repeat names for {pid}: {name}, {names[pid]}')
                 if pid not in kck_teams:
                     kck_teams[pid] = {}
                 team = row["team"]
@@ -51,7 +53,8 @@ class SeasonStats:
                 if pid not in names:
                     names[pid] = name
                 elif pid in names and names[pid] != name:
-                    raise ValueError(f'Repeat names for {pid}: {name}, {names[pid]}')
+                    raise ValueError(
+                        f'Repeat names for {pid}: {name}, {names[pid]}')
                 if pid in off_team:
                     raise ValueError(f"Wait!! {pid} is in offense twice!!")
                 off_team[pid] = row["recent_team"]
@@ -86,9 +89,15 @@ class SeasonStats:
 
 def main():
     s22 = SeasonStats(_SEASON_2022, "REG+POST")
+    all_teams = set([])
     for pid in s22.player_ids:
-        if random.random() < 0.03:
-            print(f'{s22._names[pid]} ({pid}):\n\t{s22._offteams.get(pid, "[none]")}\n\t{s22._defteams.get(pid, {})}\n\t{s22._kckteams.get(pid, {})}\n')
+        for team in s22._defteams.get(pid, {}).keys():
+            all_teams.add(team)
+        for team in s22._kckteams.get(pid, {}).keys():
+            all_teams.add(team)
+        all_teams.add(s22._offteams.get(pid, ""))
+    for t in sorted(all_teams):
+        print(f'\t"{t}",')
 
 
 
