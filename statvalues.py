@@ -1,27 +1,4 @@
-OFF = """
-headshot_url",
-player_display_name",
-player_id",
-player_name",
-position",
-position_group",
-recent_team",
-season",
-season_type",
-"""
-
-DEF = """
-    
-headshot_url",
-player_display_name",
-player_id",
-player_name",
-position",
-position_group",
-season",
-season_type",
-team",
-"""
+"""Designations and column names for stats and points used in my league."""
 
 # CSV column name mapped to number of points the feature is worth.
 FANTASY_POINTS = {
@@ -114,7 +91,6 @@ PREDICTORS = (
   "fg_att",
   "fg_blocked",
   "fg_blocked_distance",
-  "fg_blocked_list",
   "fg_long",
   "fg_made",
   "fg_made_0_19",
@@ -123,7 +99,6 @@ PREDICTORS = (
   "fg_made_40_49",
   "fg_made_50_59",
   "fg_made_60_",
-  "fg_made_list",
   "fg_missed_0_19",
   "fg_missed_20_29",
   "fg_missed_30_39",
@@ -131,12 +106,10 @@ PREDICTORS = (
   "fg_missed_50_59",
   "fg_missed_60_",
   "fg_missed_distance",
-  "fg_missed_list",
   "fg_pct",
   "kck_games",  # WARNING!! MUST MAP! Manually edit CSVs.
   "gwfg_att",
   "gwfg_blocked",
-  "gwfg_distance_list",
   "gwfg_made",
   "gwfg_missed",
   "pat_att",
