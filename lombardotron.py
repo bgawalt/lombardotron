@@ -18,6 +18,7 @@ _SEASON_2023 = (_OFF_2023, _DEF_2023, _KCK_2023)
 
 _PID_COLUMN = "player_id"
 _NAME_COLUMN = "player_name"
+_POSITION_COLUMN = "position"
 _SEASON_TYPE_COLUMN = "season_type"
 
 
@@ -34,6 +35,7 @@ class PlayerStats:
   def __init__(self, pid: str, name: str):
     self._pid = pid
     self._name = name
+    self._positions = collections.defaultdict(int)
     # Each of the following are {team: game count}
     self._off_games = {}
     self._def_games = {}
@@ -41,6 +43,8 @@ class PlayerStats:
     self._stats = collections.defaultdict(float)
 
   def add_row(self, row: dict[str, str]):
+    pos = row[_POSITION_COLUMN]
+    self._positions[pos] += 1
     team = None
     if "recent_team" in row:
       team = row["recent_team"]
@@ -66,6 +70,12 @@ class PlayerStats:
       if stat not in row:
         continue
       self._stats[stat] += empty_float(row[stat])
+  
+  def roles(self) -> str:
+    return "/".join(
+      role for role, _ in
+      sorted(self._positions.items(), key=lambda t: t[1], reverse=True)
+    )    
   
   def score(self) -> float:
     return sum(
@@ -101,15 +111,20 @@ class SeasonStats:
 def main():
   s22 = SeasonStats(_SEASON_2022, "REG+POST")
   print(len(s22.player_ids))
-  s23 = SeasonStats(_SEASON_2022, "REG")
+  s23 = SeasonStats(_SEASON_2023, "REG")
   print(len(s23.player_ids))
 
   p23 = list(sorted(s23._players.values(), key=lambda p: p.score()))
   for p in p23[:10]:
-    print(f'{p._name} ({p._pid}):\t{p.score():0.1f}')
+    print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
   print('...')
   for p in p23[-10:]:
-    print(f'{p._name} ({p._pid}):\t{p.score():0.1f}')
+    print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
+  print(len(list(p for p in p23 if p.score() <= 0)))
+  print("\n")
+  for p in p23:
+    if "/" in p.roles():
+      print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
 
 
 if __name__ == "__main__":
