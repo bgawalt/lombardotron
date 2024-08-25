@@ -3,6 +3,8 @@ import csv
 
 from collections.abc import Iterator
 
+import numpy
+
 import statvalues
 
 
@@ -90,6 +92,10 @@ class PlayerStats:
       pts * self._stats[stat]
       for stat, pts in statvalues.FANTASY_POINTS.items()
     )
+  
+  def features(self) -> numpy.ndarray:
+    return numpy.fromiter(
+      (self._stats.get(stat, 0.0) for stat in statvalues.ALL_FEATURES), float)
 
 
 class SeasonStats:
@@ -116,24 +122,33 @@ class SeasonStats:
     """All the player IDs recorded for this season."""
     yield from self._players.keys()
   
-  def get_player_stats(self, player_id: str) -> PlayerStats | None:
+  def get_player_stats(self, player_id: str) -> PlayerStats:
     """Stats for the player for this season, if available."""
-    return self._players.get(player_id)
+    return self._players[player_id]
 
 
 def main():
   s22 = SeasonStats(_SEASON_2022, "REG")
   s23 = SeasonStats(_SEASON_2023, "REG")
 
-  for pid in s22.player_ids:
-    s22_stats = s22.get_player_stats(pid)
-    if s22_stats is None:
-      raise ValueError(f"Somehow missing actual {pid} stats from Season '22")
-    s23_stats = s23.get_player_stats(pid)
-    if s23_stats is None:
-      continue
-    print(f'{pid}\t{s22_stats.name}\t{s22_stats.idp_score():0.1f}\t' + 
-          f'{s23_stats.idp_score():0.1f}')
+  s22_pids = set(s22.player_ids)
+  both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)
+  num_rows = len(both_pids)
+  num_cols = len(statvalues.ALL_FEATURES)
+
+  features = numpy.zeros((num_rows, num_cols), float)
+  labels = numpy.zeros((num_rows,), float)
+
+  for i, pid in enumerate(both_pids):
+    s22_pstats = s22.get_player_stats(pid)
+    s23_pstats = s23.get_player_stats(pid)
+    features[i, :] = s22_pstats.features()
+    labels[i] = s23_pstats.idp_score()
+  f_mean = features.mean(axis=0)
+  f_std = features.std(axis=0)
+  print(f'feature_name\tmean\tstd_dev')
+  for stat_name, mu, sig in zip(statvalues.ALL_FEATURES, f_mean, f_std):
+    print(f'{stat_name}\t{mu:0.3f}\t{sig:0.3f}')
 
 
 if __name__ == "__main__":

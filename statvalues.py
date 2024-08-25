@@ -99,7 +99,7 @@ PREDICTORS = (
   "fg_made_40_49",
   "fg_made_50_59",
   "fg_made_60_",
-  "fg_missed_0_19",
+  "fg_missed_0_19",  # Note: this is always zero in 2022-23 season!
   "fg_missed_20_29",
   "fg_missed_30_39",
   "fg_missed_40_49",

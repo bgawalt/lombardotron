@@ -147,3 +147,14 @@ linear and log scale, for the 2023-24 season:
 ![IDP Score Histogram, Log Scale](fig/idp_histogram_log.png)
 
 [Commit with this code: 1600d74](https://github.com/bgawalt/lombardotron/blob/1600d74f4f316309844f654d4dd0a97ff325bfba/lombardotron.py)
+
+## Featurizing
+
+The features I will use for each player are their season-wide stats racked up in
+the 2022-23 regular season.
+
+The list of stats I extract from the NFLverse CSVs are in `statvalues.py`.
+I wind up with 97 of them overall.  Interestingly, one stats counts a player's
+field goals missed from 0 to 19 yards away from the end zone -- and not a single
+player ever missed an FG from that close in the '22-'23 season. So that feature
+is useless.
