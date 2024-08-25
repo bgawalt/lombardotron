@@ -130,9 +130,14 @@ P.Mahomes (00-0033873): 418.9
 
 [Commit with this code: 4f85564](https://github.com/bgawalt/lombardotron/blob/4f85564ee9b8755b31f015436ca9e41e2fb3f5d6/lombardotron.py)
 
-We can also look at each player's total IDP points across '22 vs. across '23:
+We can also look at each player's total IDP points across '22 vs. across '23
+(with a series of y = x equality included in red):
 
 ![IDP Scatter Plot, 2023-24 v 2022-23 Seasons](fig/idp_scatter.png)
+
+**This is the baseline to beat.** I will need to come up with a function of
+'22-season stats that is a tighter match to '23 performance, than just applying
+the IDP formula to the '22 stats and calling that my prediction.
 
 Here are histograms of season-long player IDP score, with y-axis counts in
 linear and log scale, for the 2023-24 season:
@@ -140,3 +145,5 @@ linear and log scale, for the 2023-24 season:
 ![IDP Score Histogram](fig/idp_histogram.png)
 
 ![IDP Score Histogram, Log Scale](fig/idp_histogram_log.png)
+
+[Commit with this code: 1600d74](https://github.com/bgawalt/lombardotron/blob/1600d74f4f316309844f654d4dd0a97ff325bfba/lombardotron.py)
