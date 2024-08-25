@@ -5,6 +5,8 @@ from collections.abc import Iterator
 
 import numpy
 
+from sklearn import linear_model
+
 import statvalues
 
 
@@ -144,11 +146,25 @@ def main():
     s23_pstats = s23.get_player_stats(pid)
     features[i, :] = s22_pstats.features()
     labels[i] = s23_pstats.idp_score()
-  f_mean = features.mean(axis=0)
-  f_std = features.std(axis=0)
-  print(f'feature_name\tmean\tstd_dev')
-  for stat_name, mu, sig in zip(statvalues.ALL_FEATURES, f_mean, f_std):
-    print(f'{stat_name}\t{mu:0.3f}\t{sig:0.3f}')
+
+  ols = linear_model.LinearRegression()
+  ols.fit(features, labels)
+  preds = ols.predict(features)
+  print("pid\tname\tidp_2023_actual\tidp_2022_actual\tidp_2023_ols")
+  for pid, pred, actual in zip(both_pids, preds, labels):
+    s23_pstats = s23.get_player_stats(pid)
+    s22_idp = s22.get_player_stats(pid).idp_score()
+    print(f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp}\t{pred:0.1f}")
+  
+  raise ValueError("Let's exit early")
+
+  print(f'feature_name\tmean\tstd_dev\tols_coef')
+  for stat_name, mu, sig, coef in zip(
+    statvalues.ALL_FEATURES,
+    features.mean(axis=0),
+    features.std(axis=0),
+    ols.coef_):
+    print(f'{stat_name}\t{mu:0.3f}\t{sig:0.3f}\t{coef:0.3f}')
 
 
 if __name__ == "__main__":

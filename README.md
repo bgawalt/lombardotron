@@ -150,11 +150,46 @@ linear and log scale, for the 2023-24 season:
 
 ## Featurizing
 
+### Numerical stats
+
 The features I will use for each player are their season-wide stats racked up in
 the 2022-23 regular season.
 
-The list of stats I extract from the NFLverse CSVs are in `statvalues.py`.
+The list of numerical stats I extract from the NFLverse CSVs are in `statvalues.py`.
 I wind up with 97 of them overall.  Interestingly, one stats counts a player's
 field goals missed from 0 to 19 yards away from the end zone -- and not a single
 player ever missed an FG from that close in the '22-'23 season. So that feature
 is useless.
+
+[Commit with this code: 1104d60](https://github.com/bgawalt/lombardotron/blob/1104d6095c098b4932e42be877890b868cd80b2b/lombardotron.py)
+
+### Text stats
+
+TODO: Team, position
+
+## Modeling
+
+### Round 1: (Overfit) Ordinary Least Squares
+
+We can try out the first attempt at a learned model for mapping season K's stats
+to season K+1: by fitting ordinary least squares to the 97 '22 season
+*numerical* stats (I'd not yet looped in team or position indicators) for
+the 1218 players on record, so that our guess at '23 IDP is a weighted sum of
+those stats.
+
+We can overlay the OLS predictions on top of the previous scatter plot, where
+'22 IDP was used as the horizontal-axis predictor:
+
+![Two predictors of '23 IDP: Overfit OLS and '22 IDP](fig/ols_v_s22idp.png)
+
+The new, OLS result, in red, looks slightly tighter. (I haven't started checking
+actual squared error loss metrics yet.)
+
+But! This is cheating. *The weights have been specifically picked to fit the
+2023-24 IDP score outcomes.** These are not predictions on held-out data, the
+way the weights that comprise IDP were set before the '23 season outcomes were
+known.
+
+This estimator is also unregularized, which I think explains wackiness around
+why both "field goals made" and "field goals missed" have the same positive
+weight parameter. Missing a field goal should not be as good as making one!
