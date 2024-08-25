@@ -1,6 +1,8 @@
 import collections
 import csv
 
+from collections.abc import Iterator
+
 import statvalues
 
 
@@ -41,8 +43,13 @@ class PlayerStats:
     self._def_games = {}
     self._kck_games = {}
     self._stats = collections.defaultdict(float)
+  
+  @property
+  def name(self) -> str:
+    return self._name
 
   def add_row(self, row: dict[str, str]):
+    """Add per-team season-long off/def/kick statistics for a player."""
     pos = row[_POSITION_COLUMN]
     self._positions[pos] += 1
     team = None
@@ -77,7 +84,8 @@ class PlayerStats:
       sorted(self._positions.items(), key=lambda t: t[1], reverse=True)
     )    
   
-  def score(self) -> float:
+  def idp_score(self) -> float:
+    """Points earned by player over the season under my league's IDP rules."""
     return sum(
       pts * self._stats[stat]
       for stat, pts in statvalues.FANTASY_POINTS.items()
@@ -104,27 +112,28 @@ class SeasonStats:
         self._players[pid].add_row(row)
 
   @property
-  def player_ids(self):
-    return self._players.keys()
+  def player_ids(self) -> Iterator[str]:
+    """All the player IDs recorded for this season."""
+    yield from self._players.keys()
+  
+  def get_player_stats(self, player_id: str) -> PlayerStats | None:
+    """Stats for the player for this season, if available."""
+    return self._players.get(player_id)
 
 
 def main():
-  s22 = SeasonStats(_SEASON_2022, "REG+POST")
-  print(len(s22.player_ids))
+  s22 = SeasonStats(_SEASON_2022, "REG")
   s23 = SeasonStats(_SEASON_2023, "REG")
-  print(len(s23.player_ids))
 
-  p23 = list(sorted(s23._players.values(), key=lambda p: p.score()))
-  for p in p23[:10]:
-    print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
-  print('...')
-  for p in p23[-10:]:
-    print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
-  print(len(list(p for p in p23 if p.score() <= 0)))
-  print("\n")
-  for p in p23:
-    if "/" in p.roles() or not p.roles():
-      print(f'{p._name}, {p.roles()}:\t{p.score():0.1f}')
+  for pid in s22.player_ids:
+    s22_stats = s22.get_player_stats(pid)
+    if s22_stats is None:
+      raise ValueError(f"Somehow missing actual {pid} stats from Season '22")
+    s23_stats = s23.get_player_stats(pid)
+    if s23_stats is None:
+      continue
+    print(f'{pid}\t{s22_stats.name}\t{s22_stats.idp_score():0.1f}\t' + 
+          f'{s23_stats.idp_score():0.1f}')
 
 
 if __name__ == "__main__":

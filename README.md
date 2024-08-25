@@ -101,7 +101,7 @@ NFL stats.
 
 ### Fantasy Points
 
-Here's the 10 lowest- and 10 highest-scoring players in the 2023-24 season,
+Here's the 10 lowest- and 10 highest-scoring players in the 2022-23 season,
 according to my IDP league's scoring system:
 
 ```
@@ -127,3 +127,16 @@ A.Ekeler (00-0033699):  382.7
 J.Allen (00-0034857):   403.3
 P.Mahomes (00-0033873): 418.9
 ```
+
+[Commit with this code: 4f85564](https://github.com/bgawalt/lombardotron/blob/4f85564ee9b8755b31f015436ca9e41e2fb3f5d6/lombardotron.py)
+
+We can also look at each player's total IDP points across '22 vs. across '23:
+
+![IDP Scatter Plot, 2023-24 v 2022-23 Seasons](fig/idp_scatter.png)
+
+Here are histograms of season-long player IDP score, with y-axis counts in
+linear and log scale, for the 2023-24 season:
+
+![IDP Score Histogram](fig/idp_histogram.png)
+
+![IDP Score Histogram, Log Scale](fig/idp_histogram_log.png)
