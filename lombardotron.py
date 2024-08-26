@@ -5,7 +5,7 @@ from collections.abc import Iterator
 
 import numpy
 
-from sklearn import linear_model
+from sklearn import linear_model # type: ignore
 
 import statvalues
 
@@ -23,7 +23,7 @@ _SEASON_2023 = (_OFF_2023, _DEF_2023, _KCK_2023)
 # TODO: move REG, POST, REG+POST to statvalues enum
 
 _PID_COLUMN = "player_id"
-_NAME_COLUMN = "player_name"
+_NAME_COLUMN = "player_display_name"
 _POSITION_COLUMN = "position"
 _SEASON_TYPE_COLUMN = "season_type"
 
@@ -95,6 +95,18 @@ class PlayerStats:
       for stat, pts in statvalues.FANTASY_POINTS.items()
     )
   
+  def weight(self) -> float:
+    """How much influence to give this player when training an IDP predictor.
+    
+    Each team in my league has 19 slots, and there's 12 league members, so 228
+    drafted players. If you look at the 250th highest IDP score in 2023, that's
+    around 117 points. So most of the players I'm interested in, have an IDP
+    score above 100 points.
+
+    This function weights each player based on that threshold of 100 IDP points.
+    """
+    return max(self.idp_score()/100, 1.0)
+  
   def features(self) -> numpy.ndarray:
     return numpy.fromiter(
       (self._stats.get(stat, 0.0) for stat in statvalues.ALL_FEATURES), float)
@@ -140,12 +152,14 @@ def main():
 
   features = numpy.zeros((num_rows, num_cols), float)
   labels = numpy.zeros((num_rows,), float)
+  weights = []
 
   for i, pid in enumerate(both_pids):
     s22_pstats = s22.get_player_stats(pid)
     s23_pstats = s23.get_player_stats(pid)
     features[i, :] = s22_pstats.features()
     labels[i] = s23_pstats.idp_score()
+    weights.append(s23_pstats.weight())
 
   ols = linear_model.LinearRegression()
   ols.fit(features, labels)
@@ -154,7 +168,8 @@ def main():
   for pid, pred, actual in zip(both_pids, preds, labels):
     s23_pstats = s23.get_player_stats(pid)
     s22_idp = s22.get_player_stats(pid).idp_score()
-    print(f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp}\t{pred:0.1f}")
+    print(
+      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
   
   raise ValueError("Let's exit early")
 

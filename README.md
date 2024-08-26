@@ -148,9 +148,28 @@ linear and log scale, for the 2023-24 season:
 
 [Commit with this code: 1600d74](https://github.com/bgawalt/lombardotron/blob/1600d74f4f316309844f654d4dd0a97ff325bfba/lombardotron.py)
 
-## Featurizing
+## Building Examples
 
-### Numerical stats
+Machine learning requires labeled examples; `(x; y)` pairs, for feature vectors
+`x` and labels `y` (scalar or vector).
+
+### Example unit
+
+Each example is a player who played in both the 2022-23 season *and* the
+2023-24 season. That comes to 1,218 players.
+
+### Labels
+
+This is straightforward: the label for a player will be their IDP score,
+calculated over the player's total stats accumulated for the full '23 *regular*
+season (no post season).
+
+### Feature vectors
+
+Feature vectors are based on the player's stats from '22, accumulated, again,
+across the *regular* season games.
+
+#### Numerical stats
 
 The features I will use for each player are their season-wide stats racked up in
 the 2022-23 regular season.
@@ -163,9 +182,35 @@ is useless.
 
 [Commit with this code: 1104d60](https://github.com/bgawalt/lombardotron/blob/1104d6095c098b4932e42be877890b868cd80b2b/lombardotron.py)
 
-### Text stats
+#### Text stats
 
 TODO: Team, position
+
+### Example weight
+
+I can give each example an individual weight, to tell whatever predictive
+algorithm instructions on how much importance it should put on correctly
+predicting *that* example, vs. its peers.
+
+Each team in my league has 19 slots, and there's 12 league members, so that's
+228 drafted players. If you look at the 250th highest IDP score in 2023, that's
+around 117 points. So most of the players I'm interested in have an IDP score
+above 100 points.
+
+My example-weighting function weights each player based on that threshold of 100
+IDP points:
+
+1.  Everyone with a '23 IDP score of 100 or more gets a weight of 1
+2.  Everyone else gets a weight of their IDP divided by 100
+
+So as a player's score gets farther and farther from the threshold of "likely to
+be on a team in my fantasy leagure," its influence on model training steadily
+diminishes.
+
+This way, the rules I learn, will be focused on correctly predicting the top
+quantile of the league. It doesn't do me any good to build a model that does
+great predicting perfomrance players that only produce a small number of points:
+they're not the ones I'm gonna need on my team if I'm gonna win.
 
 ## Modeling
 
@@ -193,3 +238,5 @@ known.
 This estimator is also unregularized, which I think explains wackiness around
 why both "field goals made" and "field goals missed" have the same positive
 weight parameter. Missing a field goal should not be as good as making one!
+
+[Commit with this code: 24b17b2](https://github.com/bgawalt/lombardotron/blob/24b17b2bd80342f5a9e302dbb92eef32ce738ecb/lombardotron.py)
