@@ -212,6 +212,8 @@ quantile of the league. It doesn't do me any good to build a model that does
 great predicting perfomrance players that only produce a small number of points:
 they're not the ones I'm gonna need on my team if I'm gonna win.
 
+This starts showing up in the modeling in Round 3.
+
 [Commit with this code: ec8a2ae](https://github.com/bgawalt/lombardotron/blob/ec8a2aeee3728c8840acaac0ed30f9d19fa98a82/lombardotron.py)
 
 ## Modeling
@@ -246,3 +248,29 @@ why both "field goals made" and "field goals missed" have the same positive
 weight parameter. Missing a field goal should not be as good as making one!
 
 [Commit with this code: 24b17b2](https://github.com/bgawalt/lombardotron/blob/24b17b2bd80342f5a9e302dbb92eef32ce738ecb/lombardotron.py)
+
+### Round 2: (Also mostly overfit) Support Vector Regression
+
+Note: I do now have "weight by clipping `0.01 * idp` to a max of 1.0" sample
+weighting in place.
+
+I can repeat the above exercise with a more complicated, nonlinear model:
+support vector regression.  I do set the regularization parameter of the model
+with a 7-fold cross-validation routine, so there's *some* constraint on how
+low the training error can go before totally detonating generalizability.
+
+But this scatter plot still represents fitting that SVR with the cross-validated
+regression parameter to the full league and *then* asking it for predictions of
+the player's '23 point totals, *after* already being shown them at training
+time.
+
+![Two predictors of '23 IDP: Overfit SVR and '22 IDP](fig/svr_v_s22idp.png)
+
+In other words, (a) this is still a chart of training set error, who knows how
+much worse test-set error would be; and (b) this error still seems very high!!
+The prediction just seems fundamentally difficult with this feature set.
+
+(I do still need to add text features into the feature set, i.e., note each
+player's position.)
+
+[Commit with this code: 316d138](https://github.com/bgawalt/lombardotron/blob/316d13833bc2f57d9a87755bd57735afdcf4c98d/lombardotron.py)
