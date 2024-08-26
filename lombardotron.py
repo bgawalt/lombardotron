@@ -5,7 +5,8 @@ from collections.abc import Iterator
 
 import numpy
 
-from sklearn import linear_model # type: ignore
+from sklearn import model_selection # type: ignore
+from sklearn import svm # type: ignore
 
 import statvalues
 
@@ -121,7 +122,7 @@ class SeasonStats:
       self._add_file(filename=filename, season_type=season_type)
 
   def _add_file(self, filename: str, season_type: str):
-    with open(filename, 'rt') as infile:
+    with open(filename, "rt") as infile:
       for i, row in enumerate(csv.DictReader(infile)):
         if row.get("season_type") != season_type:
           continue
@@ -161,25 +162,35 @@ def main():
     labels[i] = s23_pstats.idp_score()
     weights.append(s23_pstats.weight())
 
-  ols = linear_model.LinearRegression()
-  ols.fit(features, labels)
-  preds = ols.predict(features)
-  print("pid\tname\tidp_2023_actual\tidp_2022_actual\tidp_2023_ols")
+
+  params = {"C": [1, 3, 10, 30, 100, 300, 1000]}
+  base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
+  
+  k = 7
+  inner_cv = model_selection.KFold(
+    n_splits=k, shuffle=True, random_state=8675309)
+  
+  gscv = model_selection.GridSearchCV(
+    estimator=base_svr, param_grid=params, cv=inner_cv)
+  gscv.fit(features, labels, sample_weight=weights)
+  best_c = gscv.best_params_["C"]
+  
+  svr = svm.SVR(kernel="rbf", C=best_c, gamma="scale", epsilon=5)
+  svr.fit(features, labels, sample_weight=weights)
+  preds = svr.predict(features)
+  print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr")
   for pid, pred, actual in zip(both_pids, preds, labels):
     s23_pstats = s23.get_player_stats(pid)
     s22_idp = s22.get_player_stats(pid).idp_score()
     print(
       f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
-  
+    
   raise ValueError("Let's exit early")
-
-  print(f'feature_name\tmean\tstd_dev\tols_coef')
-  for stat_name, mu, sig, coef in zip(
-    statvalues.ALL_FEATURES,
-    features.mean(axis=0),
-    features.std(axis=0),
-    ols.coef_):
-    print(f'{stat_name}\t{mu:0.3f}\t{sig:0.3f}\t{coef:0.3f}')
+  
+  print(gscv.cv_results_["mean_test_score"])
+  print(gscv.cv_results_["rank_test_score"])
+  print(gscv.best_score_, gscv.best_index_)
+  print(gscv.best_params_)
 
 
 if __name__ == "__main__":
