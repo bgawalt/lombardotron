@@ -212,6 +212,8 @@ quantile of the league. It doesn't do me any good to build a model that does
 great predicting perfomrance players that only produce a small number of points:
 they're not the ones I'm gonna need on my team if I'm gonna win.
 
+[Commit with this code: ec8a2ae](https://github.com/bgawalt/lombardotron/blob/ec8a2aeee3728c8840acaac0ed30f9d19fa98a82/lombardotron.py)
+
 ## Modeling
 
 ### Round 1: (Overfit) Ordinary Least Squares
@@ -221,6 +223,10 @@ to season K+1: by fitting ordinary least squares to the 97 '22 season
 *numerical* stats (I'd not yet looped in team or position indicators) for
 the 1218 players on record, so that our guess at '23 IDP is a weighted sum of
 those stats.
+
+Note: I trained this model *before* arriving at my example weight scheme; this
+predictor was trained treating every example-player as equally important to
+correctly guess.
 
 We can overlay the OLS predictions on top of the previous scatter plot, where
 '22 IDP was used as the horizontal-axis predictor:
