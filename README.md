@@ -259,6 +259,20 @@ support vector regression.  I do set the regularization parameter of the model
 with a 7-fold cross-validation routine, so there's *some* constraint on how
 low the training error can go before totally detonating generalizability.
 
+And the regularization does make a difference: you can see relaxing it from 1
+to 30 (higher means lighter regularization) makes for a significant gain in
+cross-validation score, while further relaxing it causes the score to slip some:
+
+| Reg. Param | XVal Score |
+|------------|------------|
+| 1          | 0.30       |
+| 3          | 0.32       |
+| 10         | 0.35       |
+| 30         | 0.4        |
+| 100        | 0.39       |
+| 300        | 0.38       |
+| 1000       | 0.38       |
+
 But this scatter plot still represents fitting that SVR with the cross-validated
 regression parameter to the full league and *then* asking it for predictions of
 the player's '23 point totals, *after* already being shown them at training
