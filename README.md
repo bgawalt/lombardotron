@@ -174,17 +174,36 @@ across the *regular* season games.
 The features I will use for each player are their season-wide stats racked up in
 the 2022-23 regular season.
 
-The list of numerical stats I extract from the NFLverse CSVs are in `statvalues.py`.
-I wind up with 97 of them overall.  Interestingly, one stats counts a player's
-field goals missed from 0 to 19 yards away from the end zone -- and not a single
-player ever missed an FG from that close in the '22-'23 season. So that feature
-is useless.
+The list of numerical stats I extract from the NFLverse CSVs are in
+`statvalues.py`. I wind up with 97 of them overall.  Interestingly, one stats
+counts a player's field goals missed from 0 to 19 yards away from the end zone
+-- and not a single player ever missed an FG from that close in the '22-'23
+season. So that feature is useless.
 
 [Commit with this code: 1104d60](https://github.com/bgawalt/lombardotron/blob/1104d6095c098b4932e42be877890b868cd80b2b/lombardotron.py)
 
 #### Text stats
 
-TODO: Team, position
+In addition to the season-aggregate numerical stats, I can encode categorical
+features of each player as well:
+
+##### Teams
+
+I can count the number of games played for each team, for each of
+the offensive, defensive, and kicking stats CSVs I load. I already track
+total number of games played in each role-type as numeric stats `"games"`
+(for offense), `"def_games"`, and `"kck_games"`; but now I can further
+break that down by team. (Maybe that means I should drop the redundant
+numeric sums.)
+
+These features wind up looking like a sparse vector of length (3 * 32) = 96.
+Most of the entries are zero: not that many players play for multiple teams in
+a season (like one in six are traded, per above?), and not that many rack up
+stats across the off.-v-def.-v-kicking divide.
+
+##### Position
+
+TODO: I can also do a sparse, one-hot encoding of each player's position.
 
 ### Example weight
 
@@ -288,3 +307,42 @@ The prediction just seems fundamentally difficult with this feature set.
 player's position.)
 
 [Commit with this code: 316d138](https://github.com/bgawalt/lombardotron/blob/316d13833bc2f57d9a87755bd57735afdcf4c98d/lombardotron.py)
+
+### Round 3: SVR, now with Teams info
+
+When I add the "games, per role-class, per team" features... the overall
+crossvalidation metric doesn't move a lot:
+
+Without the team features:
+
+```
+[... player predictions...]
+00-0036854      Evan McPherson  140.2   126.2   131.6
+00-0037224      Cameron Dicker  156.1   94.3    110.4
+
+ (1218, 97) 1218
+[0.29829994 0.32089459 0.35261023 0.40399625 0.38953098 0.38257385
+ 0.37988245]
+[7 6 5 1 2 3 4]
+0.40399625345438267 3
+{'C': 30}
+```
+
+With the team features:
+
+```
+[... player predictions...]
+00-0036854      Evan McPherson  140.2   126.2   131.6
+00-0037224      Cameron Dicker  156.1   94.3    110.4
+
+ (1218, 193) 1218
+[0.29836963 0.32085745 0.35248977 0.40383257 0.38968299 0.38277266
+ 0.38005518]
+[7 6 5 1 2 3 4]
+0.4038325660089334 3
+{'C': 30}
+```
+
+Those numbers -- 0.403996 and 0.403832 -- are the crossvalidation score for each
+approach, and they're identical. Adding teams: probably did nothing.
+Interesting to see! But frustrating for my purposes.

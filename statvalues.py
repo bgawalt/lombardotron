@@ -1,5 +1,6 @@
 """Designations and column names for stats and points used in my league."""
 
+
 # CSV column name mapped to number of points the feature is worth.
 FANTASY_POINTS = {
   # == Passing ==
@@ -44,6 +45,7 @@ FANTASY_POINTS = {
   "def_tackles_solo": 1.5,
   "def_pass_defended": 1.5,            
 }
+
 
 # Stats that are worth zero points, but are useful(?) predictors.
 PREDICTORS = (
@@ -117,7 +119,9 @@ PREDICTORS = (
   "pat_pct",
 )
 
+
 ALL_FEATURES = tuple(sorted(PREDICTORS + tuple(FANTASY_POINTS.keys())))
+
 
 TEAMS = (
   "ARI",
@@ -153,5 +157,6 @@ TEAMS = (
   "TEN",
   "WAS",
 )
+
 
 TEAM_INDICES = {t: i for t, i in enumerate(TEAMS)}

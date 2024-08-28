@@ -1,5 +1,6 @@
 import collections
 import csv
+import itertools
 
 from collections.abc import Iterator
 
@@ -67,15 +68,15 @@ class PlayerStats:
     if "games" in row:
       if team in self._off_games:
         raise ValueError(f"Multiple insertion, offense, {team}, {self._pid}")
-      self._off_games[team] = row["games"]
+      self._off_games[team] = empty_float(row["games"])
     elif "def_games" in row:
       if team in self._def_games:
         raise ValueError(f"Multiple insertion, defense, {team}, {self._pid}")
-      self._def_games[team] = row["def_games"]
+      self._def_games[team] = empty_float(row["def_games"])
     elif "kck_games" in row:
       if team in self._kck_games:
         raise ValueError(f"Multiple insertion, kicking, {team}, {self._pid}")
-      self._kck_games[team] = row["kck_games"]
+      self._kck_games[team] = empty_float(row["kck_games"])
     else:
       raise ValueError(f"No games count for {self._pid}")
     for stat in statvalues.ALL_FEATURES:
@@ -107,10 +108,19 @@ class PlayerStats:
     This function weights each player based on that threshold of 100 IDP points.
     """
     return max(self.idp_score()/100, 1.0)
+
+  def _numeric_features(self) -> Iterator[float]:
+    yield from (self._stats.get(stat, 0.0) for stat in statvalues.ALL_FEATURES)
+  
+  def _team_features(self) -> Iterator[float]:
+    for role_games in (self._off_games, self._def_games, self._kck_games):
+      yield from (role_games.get(team, 0.0) for team in statvalues.TEAMS)
   
   def features(self) -> numpy.ndarray:
     return numpy.fromiter(
-      (self._stats.get(stat, 0.0) for stat in statvalues.ALL_FEATURES), float)
+      itertools.chain(self._numeric_features(), self._team_features(),),
+      float
+    )
 
 
 class SeasonStats:
@@ -149,7 +159,7 @@ def main():
   s22_pids = set(s22.player_ids)
   both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)
   num_rows = len(both_pids)
-  num_cols = len(statvalues.ALL_FEATURES)
+  num_cols = len(statvalues.ALL_FEATURES) + (3 * len(statvalues.TEAMS))
 
   features = numpy.zeros((num_rows, num_cols), float)
   labels = numpy.zeros((num_rows,), float)
@@ -161,7 +171,6 @@ def main():
     features[i, :] = s22_pstats.features()
     labels[i] = s23_pstats.idp_score()
     weights.append(s23_pstats.weight())
-
 
   params = {"C": [1, 3, 10, 30, 100, 300, 1000]}
   base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
@@ -178,15 +187,14 @@ def main():
   svr = svm.SVR(kernel="rbf", C=best_c, gamma="scale", epsilon=5)
   svr.fit(features, labels, sample_weight=weights)
   preds = svr.predict(features)
-  print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr")
+  print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr_teams")
   for pid, pred, actual in zip(both_pids, preds, labels):
     s23_pstats = s23.get_player_stats(pid)
     s22_idp = s22.get_player_stats(pid).idp_score()
     print(
       f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
     
-  raise ValueError("Let's exit early")
-  
+  print("\n", features.shape, len(labels))
   print(gscv.cv_results_["mean_test_score"])
   print(gscv.cv_results_["rank_test_score"])
   print(gscv.best_score_, gscv.best_index_)
