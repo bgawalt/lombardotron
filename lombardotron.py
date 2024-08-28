@@ -43,7 +43,7 @@ class PlayerStats:
   def __init__(self, pid: str, name: str):
     self._pid = pid
     self._name = name
-    self._positions = collections.defaultdict(int)
+    self._positions = collections.defaultdict(float)
     # Each of the following are {team: game count}
     self._off_games = {}
     self._def_games = {}
@@ -57,7 +57,11 @@ class PlayerStats:
   def add_row(self, row: dict[str, str]):
     """Add per-team season-long off/def/kick statistics for a player."""
     pos = row[_POSITION_COLUMN]
-    self._positions[pos] += 1
+    self._positions[pos] += (
+      empty_float(row.get("games", "0")) +
+      empty_float(row.get("def_games", "0")) +
+      empty_float(row.get("kck_games", "0"))
+    )
     team = None
     if "recent_team" in row:
       team = row["recent_team"]
@@ -116,9 +120,16 @@ class PlayerStats:
     for role_games in (self._off_games, self._def_games, self._kck_games):
       yield from (role_games.get(team, 0.0) for team in statvalues.TEAMS)
   
+  def _position_features(self) -> Iterator[float]:
+    yield from (self._positions[pos] for pos in statvalues.POSITIONS)
+  
   def features(self) -> numpy.ndarray:
     return numpy.fromiter(
-      itertools.chain(self._numeric_features(), self._team_features(),),
+      itertools.chain(
+        self._numeric_features(),
+        self._team_features(),
+        self._position_features()
+      ),
       float
     )
 
@@ -159,7 +170,11 @@ def main():
   s22_pids = set(s22.player_ids)
   both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)
   num_rows = len(both_pids)
-  num_cols = len(statvalues.ALL_FEATURES) + (3 * len(statvalues.TEAMS))
+  num_cols = (
+    len(statvalues.ALL_FEATURES) +
+    (3 * len(statvalues.TEAMS)) +
+    len(statvalues.POSITIONS)
+  )
 
   features = numpy.zeros((num_rows, num_cols), float)
   labels = numpy.zeros((num_rows,), float)

@@ -1,7 +1,6 @@
 """Designations and column names for stats and points used in my league."""
 
-
-# CSV column name mapped to number of points the feature is worth.
+# CSV column name mapped to number of IDP points the feature is worth.
 FANTASY_POINTS = {
   # == Passing ==
   "passing_yards": 0.04,
@@ -47,7 +46,7 @@ FANTASY_POINTS = {
 }
 
 
-# Stats that are worth zero points, but are useful(?) predictors.
+# Stats that are worth zero IDP points, but are useful(?) predictors.
 PREDICTORS = (
   "air_yards_share",
   "attempts",
@@ -124,39 +123,19 @@ ALL_FEATURES = tuple(sorted(PREDICTORS + tuple(FANTASY_POINTS.keys())))
 
 
 TEAMS = (
-  "ARI",
-  "ATL",
-  "BAL",
-  "BUF",
-  "CAR",
-  "CHI",
-  "CIN",
-  "CLE",
-  "DAL",
-  "DEN",
-  "DET",
-  "GB",
-  "HOU",
-  "IND",
-  "JAX",
-  "KC",
-  "LA",
-  "LAC",
-  "LV",
-  "MIA",
-  "MIN",
-  "NE",
-  "NO",
-  "NYG",
-  "NYJ",
-  "PHI",
-  "PIT",
-  "SEA",
-  "SF",
-  "TB",
-  "TEN",
-  "WAS",
+  "ARI", "ATL", "BAL", "BUF", "CAR",  # 0 .. 4
+  "CHI", "CIN", "CLE", "DAL", "DEN",  # 5 .. 9
+  "DET", "GB", "HOU", "IND", "JAX",  # 10 .. 14
+  "KC", "LA", "LAC", "LV", "MIA",  # 15 .. 19
+  "MIN", "NE", "NO", "NYG", "NYJ",  # 20 .. 24
+  "PHI", "PIT", "SEA", "SF", "TB",  # 25 .. 29
+  "TEN", "WAS",  # 30, 31
 )
 
-
-TEAM_INDICES = {t: i for t, i in enumerate(TEAMS)}
+POSITIONS = (
+  "C", "CB", "DB", "DE", "DT",  # 0 .. 4
+  "FB", "FS", "G", "ILB", "K",  # 5 .. 9
+  "LB", "MLB", "NT", "OLB", "P",  # 10 .. 14
+  "QB", "RB", "SS", "T", "TE",  # 20 .. 24
+  "WR",  # 25
+)

@@ -201,9 +201,14 @@ Most of the entries are zero: not that many players play for multiple teams in
 a season (like one in six are traded, per above?), and not that many rack up
 stats across the off.-v-def.-v-kicking divide.
 
+[Commit with this code: 397fc59](https://github.com/bgawalt/lombardotron/blob/397fc59616a89b0214a607927f3356090e84ff78/lombardotron.py)
+
 ##### Position
 
-TODO: I can also do a sparse, one-hot encoding of each player's position.
+I can also do a sparse, one-hot encoding of each player's position.  There
+are 26 total positions, and I can't find an example of a player playing in
+multiple across the CSVs. But just in case, the features report total number of
+games played in each position.
 
 ### Example weight
 
@@ -346,3 +351,32 @@ With the team features:
 Those numbers -- 0.403996 and 0.403832 -- are the crossvalidation score for each
 approach, and they're identical. Adding teams: probably did nothing.
 Interesting to see! But frustrating for my purposes.
+
+[Commit with this code: 397fc59](https://github.com/bgawalt/lombardotron/blob/397fc59616a89b0214a607927f3356090e84ff78/lombardotron.py)
+
+### Round 4: SVR, with Teams, with Position
+
+Adding position feature one-hot winds up not helping much either:
+
+```
+[... player predictions...]
+00-0036854      Evan McPherson  140.2   126.2   131.6
+00-0037224      Cameron Dicker  156.1   94.3    110.4
+
+ (1218, 214) 1218
+[0.29847493 0.32104797 0.3527188  0.40408365 0.38985803 0.3841788
+ 0.38236833]
+[7 6 5 1 2 3 4]
+0.4040836535699093 3
+{'C': 30}
+```
+
+Cross-validation score of 0.404, doesn't seem to have made a difference.
+
+On the one hand, sure, position is probably pretty guessable from the numeric
+stats themselves. It is easy to tell a quarterback from a wide receiver from a
+kicker based on the numeric stats columns. On the other hand, the defensive
+line positions, I would have hoped that explicitly allowing the model to know
+which specific role they play to better inform whether their
+average-for-the-defensive-line stats are better or worse than they look, as a
+function 
