@@ -13,22 +13,33 @@ from sklearn import svm # type: ignore
 import statvalues
 
 
-_DEF_2022 = "./data/player_stats_def_season_2022.csv"
-_DEF_2023 = "./data/player_stats_def_season_2023.csv"
-_KCK_2022 = "./data/player_stats_kicking_season_2022.csv"
-_KCK_2023 = "./data/player_stats_kicking_season_2023.csv"
-_OFF_2022 = "./data/player_stats_season_2022.csv"
-_OFF_2023 = "./data/player_stats_season_2023.csv"
+@dataclasses.dataclass(frozen=True)
+class SeasonFiles:
+  """Paths to CSV files describing an NFL season."""
+  offense_csv: str
+  defense_csv: str
+  kicking_csv: str
+  roster_csv: str
 
-_SEASON_2022 = (_OFF_2022, _DEF_2022, _KCK_2022)
-_SEASON_2023 = (_OFF_2023, _DEF_2023, _KCK_2023)
 
-# TODO: move REG, POST, REG+POST to statvalues enum
+SEASON_FILES_2022 = SeasonFiles(
+  offense_csv="./data/player_stats_season_2022.csv",
+  defense_csv="./data/player_stats_def_season_2022.csv",
+  kicking_csv="./data/player_stats_kicking_season_2022.csv",
+  roster_csv="/dev/null"
+)
+
+
+SEASON_FILES_2023 = SeasonFiles(
+  offense_csv="./data/player_stats_season_2023.csv",
+  defense_csv="./data/player_stats_def_season_2023.csv",
+  kicking_csv="./data/player_stats_kicking_season_2023.csv",
+  roster_csv="./data/roster_weekly_2023.csv"
+)
 
 _PID_COLUMN = "player_id"
 _NAME_COLUMN = "player_display_name"
 _POSITION_COLUMN = "position"
-_SEASON_TYPE_COLUMN = "season_type"
 
 
 def empty_float(s: str) -> float:
@@ -138,14 +149,15 @@ class PlayerStats:
 class SeasonStats:
   """Stats for the full league of players, for one season."""
 
-  def __init__(self, season: tuple[str, str, str], season_type: str):
+  def __init__(self, season: SeasonFiles, season_type: str):
     self._players: dict[str, PlayerStats] = {}
-    for filename in season:
-      self._add_file(filename=filename, season_type=season_type)
+    self._add_file(filename=season.offense_csv, season_type=season_type)
+    self._add_file(filename=season.defense_csv, season_type=season_type)
+    self._add_file(filename=season.kicking_csv, season_type=season_type)
 
   def _add_file(self, filename: str, season_type: str):
     with open(filename, "rt") as infile:
-      for i, row in enumerate(csv.DictReader(infile)):
+      for row in csv.DictReader(infile):
         if row.get("season_type") != season_type:
           continue
         pid = row[_PID_COLUMN]
@@ -193,8 +205,8 @@ class WeekOneLeague:
 
 
 def main():
-  s22 = SeasonStats(_SEASON_2022, "REG")
-  s23 = SeasonStats(_SEASON_2023, "REG")
+  s22 = SeasonStats(SEASON_FILES_2022, "REG")
+  s23 = SeasonStats(SEASON_FILES_2023, "REG")
 
   s22_pids = set(s22.player_ids)
   both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)
