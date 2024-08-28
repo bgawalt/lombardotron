@@ -210,6 +210,8 @@ are 26 total positions, and I can't find an example of a player playing in
 multiple across the CSVs. But just in case, the features report total number of
 games played in each position.
 
+[Commit with this code: 660a76d](https://github.com/bgawalt/lombardotron/blob/660a76dbf854341eb47ea21743ab68173deaa70d/lombardotron.py)
+
 ### Example weight
 
 I can give each example an individual weight, to tell whatever predictive
@@ -380,3 +382,5 @@ line positions, I would have hoped that explicitly allowing the model to know
 which specific role they play to better inform whether their
 average-for-the-defensive-line stats are better or worse than they look, as a
 function 
+
+[Commit with this code: 660a76d](https://github.com/bgawalt/lombardotron/blob/660a76dbf854341eb47ea21743ab68173deaa70d/lombardotron.py)

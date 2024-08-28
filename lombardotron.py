@@ -1,5 +1,6 @@
 import collections
 import csv
+import dataclasses
 import itertools
 
 from collections.abc import Iterator
@@ -161,6 +162,34 @@ class SeasonStats:
   def get_player_stats(self, player_id: str) -> PlayerStats:
     """Stats for the player for this season, if available."""
     return self._players[player_id]
+
+
+@dataclasses.dataclass(frozen=True)
+class WeekOnePlayer:
+  """Details about a player just before a season's Week 1 kickoff."""
+  pid: str
+  active: bool
+
+  @classmethod
+  def from_row(cls, row: dict[str, str]) -> 'WeekOnePlayer | None':
+    if row["week"] != 1:
+      return None
+    pid = row["gsis_id"]
+    active = row["status"] == "ACT"
+    return WeekOnePlayer(pid, active)
+
+
+class WeekOneLeague:
+  """Details about all players just before a season's Week 1 kickoff."""
+
+  def __init__(self, roster_csv_filename: str):
+    self._players = {}
+    with open(roster_csv_filename, "rt") as infile:
+      for row in csv.DictReader(infile):
+        w1player = WeekOnePlayer.from_row(row)
+        if w1player is None:
+          continue
+        self._players[w1player.pid] = w1player
 
 
 def main():
