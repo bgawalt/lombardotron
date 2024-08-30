@@ -287,17 +287,15 @@ def build_labelled_examples(
     next_season_stats = next_season.get_player_stats(pid)
     labels.append(next_season_stats.idp_score())
     weights.append(next_season_stats.weight())
-    vi = [next_roster.players[pid].features(),]
+    vi = numpy.zeros((1, NUM_FEATURES), float)
+    vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
     if pid in prev_roster.players:
-      vi.append(prev_roster.players[pid].features())
-    else:
-      vi.append(numpy.zeros((1, NUM_ROSTER_FEATURES)))
+      vi[0, NUM_ROSTER_FEATURES:(2 * NUM_ROSTER_FEATURES)] = (
+        prev_roster.players[pid].features())
     if pid in prev_pids:
       prev_season_stats = prev_season.get_player_stats(pid)
-      vi.append(prev_season_stats.features())
-    else:
-      vi.append(numpy.zeros((1, NUM_SEASON_FEATURES)))
-    features.append(numpy.hstack(vi))
+      vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
+    features.append(vi)
   return LabelledExamples(
     pids=tuple(pids),
     features=numpy.vstack(features),

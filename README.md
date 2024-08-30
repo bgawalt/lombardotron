@@ -449,3 +449,5 @@ Yes! Real success! 0.38 becomes 0.43!
 
 Probably not substantively meaningful, but, better than the last bunch of
 rounds of "no improvement whatsoever."
+
+[Commit with this code: 0f1cc18](https://github.com/bgawalt/lombardotron/blob/0f1cc1829eb5d3bad25fa1e2484227e993df07a7/lombardotron.py)
