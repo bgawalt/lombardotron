@@ -296,9 +296,15 @@ def build_labelled_examples(
       prev_season_stats = prev_season.get_player_stats(pid)
       vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
     features.append(vi)
+  matrix = numpy.vstack(features)
+  mu = matrix.mean(axis=0)
+  sig = numpy.fromiter(
+    (si if si != 0 else 1.0 for si in matrix.std(axis=0)),
+    float
+  ).reshape((1, NUM_FEATURES))
   return LabelledExamples(
     pids=tuple(pids),
-    features=numpy.vstack(features),
+    features=(matrix - mu) / sig,
     labels=tuple(labels),
     weights=tuple(weights)
   )

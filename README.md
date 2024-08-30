@@ -451,3 +451,29 @@ Probably not substantively meaningful, but, better than the last bunch of
 rounds of "no improvement whatsoever."
 
 [Commit with this code: 0f1cc18](https://github.com/bgawalt/lombardotron/blob/0f1cc1829eb5d3bad25fa1e2484227e993df07a7/lombardotron.py)
+
+### Round 6: SVR over z-score-standardized features
+
+I tried centering the training data (subtracting out the mean from each
+feature value, then dividing by standard deviation), and it actually kinda
+made things worse:
+
+```
+[... player predictions...]
+00-0038567      Chad Ryland     74.9    0.0     63.6
+00-0038905      Blake Grupe     147.1   0.0     47.5
+
+ (1613, 230) 1613
+[0.31769843 0.3529689  0.39132148 0.4198822  0.4221486  0.39504339
+ 0.37175483]
+[7 6 4 2 1 3 5]
+0.4221485953149148 4
+{'C': 100}
+```
+
+It makes sense this doesn't help much -- the RBF kernel is smart enough to learn
+to rescale the features; it's infinite dimensional. But I thought I'd try
+anyway.
+
+It does land on a higher value of `C`, suggesting less regularization. Maybe
+I just need a finer grid search space.
