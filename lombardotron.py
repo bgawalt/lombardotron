@@ -32,8 +32,19 @@ SEASON_FILES_2023 = SeasonFiles(
   defense_csv="./data/player_stats_def_season_2023.csv",
   kicking_csv="./data/player_stats_kicking_season_2023.csv",
 )
+
+ROSTER_FILE_2022 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
 ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
+
+NUM_ROSTER_FEATURES = 8
+NUM_SEASON_FEATURES = (
+  len(statvalues.ALL_FEATURES) +
+  (3 * len(statvalues.TEAMS)) +
+  len(statvalues.POSITIONS)
+)
+
+NUM_FEATURES = (2 * NUM_ROSTER_FEATURES) + NUM_SEASON_FEATURES
 
 PID_COLUMN = "player_id"
 NAME_COLUMN = "player_display_name"
@@ -141,7 +152,7 @@ class PlayerStats:
         self._position_features()
       ),
       float
-    )
+    ).reshape((1, NUM_SEASON_FEATURES))
 
 
 class SeasonStats:
@@ -187,6 +198,15 @@ class WeekOnePlayer:
   rookie_age: float
   draft_number: float
 
+  def features(self) -> numpy.ndarray:
+    return numpy.array([
+      1.0 if self.active else 0.0,  # 0
+      self.age, self.height, self.weight,  # 1, 2, 3
+      self.years_exp, self.entry_age, self.rookie_age,  # 4, 5, 6
+      self.draft_number,  # 7
+    ], 
+    float).reshape((1, NUM_ROSTER_FEATURES))
+
   @classmethod
   def from_row(cls, row: dict[str, str]) -> 'WeekOnePlayer | None':
     now = datetime.now()
@@ -221,45 +241,80 @@ class WeekOneLeague:
   """Details about all players just before a season's Week 1 kickoff."""
 
   def __init__(self, roster_csv_filename: str):
-    self._players = {}
+    self.players: dict[str, WeekOnePlayer] = {}
     with open(roster_csv_filename, "rt") as infile:
       for row in csv.DictReader(infile):
         w1player = WeekOnePlayer.from_row(row)
         if w1player is None:
           continue
-        self._players[w1player.pid] = w1player
+        self.players[w1player.pid] = w1player
+
+
+@dataclasses.dataclass
+class LabelledExamples:
+  pids: tuple[str]
+  features: numpy.ndarray
+  labels: tuple[float]
+  weights: tuple[float]
+
+  def __post_init__(self):
+    if len(self.pids) != len(self.labels):
+      raise ValueError(f"len(pids) is {len(self.pids)} "
+                       f"but len(labels) is {len(self.labels)}")
+    if len(self.pids) != len(self.weights):
+      raise ValueError(f"len(pids) is {len(self.pids)} "
+                       f"but len(weights) is {len(self.weights)}")
+    if len(self.pids) != self.features.shape[0]:
+      raise ValueError(f"len(pids) is {len(self.pids)} "
+                       f"but len(labels) is {len(self.labels)}")
+    
+
+
+def build_labelled_examples(
+    prev_roster: WeekOneLeague,
+    prev_season: SeasonStats,
+    next_roster: WeekOneLeague,
+    next_season: SeasonStats) -> LabelledExamples:
+  pids = []
+  features = []
+  labels = []
+  weights = []
+  prev_pids = set(prev_season.player_ids)
+  for pid in next_season.player_ids:
+    if pid not in next_roster.players:
+      continue
+    pids.append(pid)
+    next_season_stats = next_season.get_player_stats(pid)
+    labels.append(next_season_stats.idp_score())
+    weights.append(next_season_stats.weight())
+    vi = [next_roster.players[pid].features(),]
+    if pid in prev_roster.players:
+      vi.append(prev_roster.players[pid].features())
+    else:
+      vi.append(numpy.zeros((1, NUM_ROSTER_FEATURES)))
+    if pid in prev_pids:
+      prev_season_stats = prev_season.get_player_stats(pid)
+      vi.append(prev_season_stats.features())
+    else:
+      vi.append(numpy.zeros((1, NUM_SEASON_FEATURES)))
+    features.append(numpy.hstack(vi))
+  return LabelledExamples(
+    pids=tuple(pids),
+    features=numpy.vstack(features),
+    labels=tuple(labels),
+    weights=tuple(weights)
+  )
 
 
 def main():
   s22 = SeasonStats(SEASON_FILES_2022, "REG")
   s23 = SeasonStats(SEASON_FILES_2023, "REG")
+  r22 = WeekOneLeague(ROSTER_FILE_2022)
   r23 = WeekOneLeague(ROSTER_FILE_2023)
-  r24 = WeekOneLeague(ROSTER_FILE_2024)
 
-  print("R23 players:", len(r23._players))
-  print("R24 players:", len(r24._players))
+  training_data = build_labelled_examples(
+    prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
 
-  raise RuntimeError("Let's exit early")
-
-  s22_pids = set(s22.player_ids)
-  both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)
-  num_rows = len(both_pids)
-  num_cols = (
-    len(statvalues.ALL_FEATURES) +
-    (3 * len(statvalues.TEAMS)) +
-    len(statvalues.POSITIONS)
-  )
-
-  features = numpy.zeros((num_rows, num_cols), float)
-  labels = numpy.zeros((num_rows,), float)
-  weights = []
-
-  for i, pid in enumerate(both_pids):
-    s22_pstats = s22.get_player_stats(pid)
-    s23_pstats = s23.get_player_stats(pid)
-    features[i, :] = s22_pstats.features()
-    labels[i] = s23_pstats.idp_score()
-    weights.append(s23_pstats.weight())
 
   params = {"C": [1, 3, 10, 30, 100, 300, 1000]}
   base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
@@ -270,20 +325,31 @@ def main():
   
   gscv = model_selection.GridSearchCV(
     estimator=base_svr, param_grid=params, cv=inner_cv)
-  gscv.fit(features, labels, sample_weight=weights)
+  gscv.fit(
+    training_data.features,
+    training_data.labels,
+    sample_weight=training_data.weights
+  )
   best_c = gscv.best_params_["C"]
   
   svr = svm.SVR(kernel="rbf", C=best_c, gamma="scale", epsilon=5)
-  svr.fit(features, labels, sample_weight=weights)
-  preds = svr.predict(features)
+  svr.fit(
+    training_data.features,
+    training_data.labels,
+    sample_weight=training_data.weights
+  )
+  preds = svr.predict(training_data.features)
   print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr_teams")
-  for pid, pred, actual in zip(both_pids, preds, labels):
+  for pid, pred, actual in zip(training_data.pids, preds, training_data.labels):
     s23_pstats = s23.get_player_stats(pid)
-    s22_idp = s22.get_player_stats(pid).idp_score()
+    try:
+      s22_idp = s22.get_player_stats(pid).idp_score()
+    except:
+      s22_idp = 0
     print(
       f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
     
-  print("\n", features.shape, len(labels))
+  print("\n", training_data.features.shape, len(training_data.labels))
   print(gscv.cv_results_["mean_test_score"])
   print(gscv.cv_results_["rank_test_score"])
   print(gscv.best_score_, gscv.best_index_)

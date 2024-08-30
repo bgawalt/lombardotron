@@ -230,6 +230,11 @@ Some players lack a birthdate on file. I just ignore them entirely. It's about
 340 players between the '23 and '24 Week 1 rosters. That's not that many, and
 surely not high performers (I hope? Because I'm ignoring them?).
 
+Also, some players lack a draft number, and in that case I just assign them
+a ridiculously high value of 400 as a "wasn't drafted" indicator.
+
+[Commit with this code: 28eeb95](https://github.com/bgawalt/lombardotron/blob/28eeb95dc220c94cf3cf092fdc4fa94748d0548f/lombardotron.py)
+
 ### Example weight
 
 I can give each example an individual weight, to tell whatever predictive
@@ -402,3 +407,45 @@ average-for-the-defensive-line stats are better or worse than they look, as a
 function 
 
 [Commit with this code: 660a76d](https://github.com/bgawalt/lombardotron/blob/660a76dbf854341eb47ea21743ab68173deaa70d/lombardotron.py)
+
+### Round 5: SVR, with Week One Roster features
+
+When I add in week-one roster features for the '22 and '23 season, I see a
+slight improvement in crossvalidation score!
+
+```
+[... player predictions...]
+00-0038567      Chad Ryland     74.9    0.0     51.9
+00-0038905      Blake Grupe     147.1   0.0     20.5
+
+ (1613, 230) 1613
+[0.32172411 0.36075292 0.3974792  0.43341156 0.4308024  0.41139254
+ 0.4211602 ]
+[7 6 5 1 2 4 3]
+0.43341155771293305 3
+{'C': 30}
+```
+
+However, I *did* also wind up changing the universe of players being predicted
+(I can handle rookies now), so, the 0.43 here may not be comparable to an 0.40
+above.
+
+If I zero out the roster features, I can make it comparable again:
+
+```
+[... player predictions...]
+00-0038567      Chad Ryland     74.9    0.0     15.7
+00-0038905      Blake Grupe     147.1   0.0     15.7
+
+ (1613, 230) 1613
+[0.2869193  0.31380936 0.35216923 0.37741982 0.35959798 0.3505194
+ 0.32626325]
+[7 6 3 1 2 4 5]
+0.3774198224525204 3
+{'C': 30}
+```
+
+Yes! Real success! 0.38 becomes 0.43!
+
+Probably not substantively meaningful, but, better than the last bunch of
+rounds of "no improvement whatsoever."
