@@ -4,6 +4,7 @@ import dataclasses
 import itertools
 
 from collections.abc import Iterator
+from datetime import datetime
 
 import numpy
 
@@ -15,37 +16,34 @@ import statvalues
 
 @dataclasses.dataclass(frozen=True)
 class SeasonFiles:
-  """Paths to CSV files describing an NFL season."""
+  """Paths to CSV files describing player stats over an NFL season."""
   offense_csv: str
   defense_csv: str
   kicking_csv: str
-  roster_csv: str
 
 
 SEASON_FILES_2022 = SeasonFiles(
   offense_csv="./data/player_stats_season_2022.csv",
   defense_csv="./data/player_stats_def_season_2022.csv",
   kicking_csv="./data/player_stats_kicking_season_2022.csv",
-  roster_csv="/dev/null"
 )
-
-
 SEASON_FILES_2023 = SeasonFiles(
   offense_csv="./data/player_stats_season_2023.csv",
   defense_csv="./data/player_stats_def_season_2023.csv",
   kicking_csv="./data/player_stats_kicking_season_2023.csv",
-  roster_csv="./data/roster_weekly_2023.csv"
 )
+ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
+ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
 
-_PID_COLUMN = "player_id"
-_NAME_COLUMN = "player_display_name"
-_POSITION_COLUMN = "position"
+PID_COLUMN = "player_id"
+NAME_COLUMN = "player_display_name"
+POSITION_COLUMN = "position"
 
 
-def empty_float(s: str) -> float:
+def empty_float(s: str, default: float = 0.0) -> float:
   """Parse ASCII to a float, and empty strings count as zero."""
   if not s:
-    return 0
+    return default
   return float(s)
 
 
@@ -68,7 +66,7 @@ class PlayerStats:
 
   def add_row(self, row: dict[str, str]):
     """Add per-team season-long off/def/kick statistics for a player."""
-    pos = row[_POSITION_COLUMN]
+    pos = row[POSITION_COLUMN]
     self._positions[pos] += (
       empty_float(row.get("games", "0")) +
       empty_float(row.get("def_games", "0")) +
@@ -160,8 +158,8 @@ class SeasonStats:
       for row in csv.DictReader(infile):
         if row.get("season_type") != season_type:
           continue
-        pid = row[_PID_COLUMN]
-        name = row[_NAME_COLUMN]
+        pid = row[PID_COLUMN]
+        name = row[NAME_COLUMN]
         if pid not in self._players:
           self._players[pid] = PlayerStats(pid=pid, name=name)
         self._players[pid].add_row(row)
@@ -181,14 +179,42 @@ class WeekOnePlayer:
   """Details about a player just before a season's Week 1 kickoff."""
   pid: str
   active: bool
+  age: float
+  height: float
+  weight: float
+  years_exp: float
+  entry_age: float
+  rookie_age: float
+  draft_number: float
 
   @classmethod
   def from_row(cls, row: dict[str, str]) -> 'WeekOnePlayer | None':
-    if row["week"] != 1:
-      return None
+    now = datetime.now()
     pid = row["gsis_id"]
-    active = row["status"] == "ACT"
-    return WeekOnePlayer(pid, active)
+    if not pid:
+      return None
+    if int(row["week"]) != 1:
+      return None
+    if not row["birth_date"]:
+      return None
+    birth_date = datetime.strptime(row["birth_date"], "%Y-%m-%d")
+    age = (now - birth_date).days / 365
+    entry_date = datetime(year=int(row["entry_year"]), month=9, day=1)
+    entry_age = (now - entry_date).days / 365
+    rook_date = datetime(year=int(row["rookie_year"]), month=9, day=1)
+    rook_age = (now - rook_date).days / 365
+    "entry_year,rookie_year,draft_club,draft_number"
+    return WeekOnePlayer(
+      pid=pid,
+      active=(row["status"] == "ACT"),
+      age=age,
+      height=float(row["height"]),
+      weight=float(row["weight"]),
+      years_exp=float(row["years_exp"]),
+      entry_age=entry_age,
+      rookie_age=rook_age,
+      draft_number=empty_float(row["draft_number"], default=400)
+    )
 
 
 class WeekOneLeague:
@@ -207,6 +233,13 @@ class WeekOneLeague:
 def main():
   s22 = SeasonStats(SEASON_FILES_2022, "REG")
   s23 = SeasonStats(SEASON_FILES_2023, "REG")
+  r23 = WeekOneLeague(ROSTER_FILE_2023)
+  r24 = WeekOneLeague(ROSTER_FILE_2024)
+
+  print("R23 players:", len(r23._players))
+  print("R24 players:", len(r24._players))
+
+  raise RuntimeError("Let's exit early")
 
   s22_pids = set(s22.player_ids)
   both_pids = tuple(pid for pid in s23.player_ids if pid in s22_pids)

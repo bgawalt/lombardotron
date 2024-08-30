@@ -32,7 +32,8 @@ threadpoolctl==3.5.0
 
 Much thanks to NFLVerse for these CSVs:
 
-https://github.com/nflverse/nflverse-data/releases/tag/player_stats
+*  https://github.com/nflverse/nflverse-data/releases/tag/player_stats
+*  https://github.com/nflverse/nflverse-data/releases/tag/weekly_rosters
 
 I downloaded a few into a folder called `data/` that I told git to ignore.
 
@@ -164,10 +165,10 @@ This is straightforward: the label for a player will be their IDP score,
 calculated over the player's total stats accumulated for the full '23 *regular*
 season (no post season).
 
-### Feature vectors
+### Season Stat Features
 
-Feature vectors are based on the player's stats from '22, accumulated, again,
-across the *regular* season games.
+Feature vectors are primarily based on the player's stats from '22, accumulated,
+again, across the *regular* season games.
 
 #### Numerical stats
 
@@ -211,6 +212,23 @@ multiple across the CSVs. But just in case, the features report total number of
 games played in each position.
 
 [Commit with this code: 660a76d](https://github.com/bgawalt/lombardotron/blob/660a76dbf854341eb47ea21743ab68173deaa70d/lombardotron.py)
+
+### Starting Week Features
+
+The NFLVerse CSV collection also includes weekly rosters, which means we can
+look up what each player looks like at the start of the season. That seems
+pretty handy: predict performance in '23 not just in '22, but with info that
+reflects what happened with the player in the offseason.
+
+So there is a `WeeklyRosterPlayer` class for bringing in basic details of what
+the player was like at-or-before Week 1 games -- and this info is
+currently/already available for 2024. Height, weight, age, etc.: pretty good.
+Plus, this handles rookies, whose main body of previous-season-stats are empty
+right now.
+
+Some players lack a birthdate on file. I just ignore them entirely. It's about
+340 players between the '23 and '24 Week 1 rosters. That's not that many, and
+surely not high performers (I hope? Because I'm ignoring them?).
 
 ### Example weight
 
