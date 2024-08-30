@@ -22,6 +22,11 @@ class SeasonFiles:
   kicking_csv: str
 
 
+SEASON_FILES_2021 = SeasonFiles(
+  offense_csv="./data/player_stats_season_2021.csv",
+  defense_csv="./data/player_stats_def_season_2021.csv",
+  kicking_csv="./data/player_stats_kicking_season_2021.csv",
+)
 SEASON_FILES_2022 = SeasonFiles(
   offense_csv="./data/player_stats_season_2022.csv",
   defense_csv="./data/player_stats_def_season_2022.csv",
@@ -33,6 +38,7 @@ SEASON_FILES_2023 = SeasonFiles(
   kicking_csv="./data/player_stats_kicking_season_2023.csv",
 )
 
+ROSTER_FILE_2021 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2022 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
 ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
@@ -252,10 +258,10 @@ class WeekOneLeague:
 
 @dataclasses.dataclass
 class LabelledExamples:
-  pids: tuple[str]
+  pids: tuple[str, ...]
   features: numpy.ndarray
-  labels: tuple[float]
-  weights: tuple[float]
+  labels: tuple[float, ...]
+  weights: tuple[float, ...]
 
   def __post_init__(self):
     if len(self.pids) != len(self.labels):
@@ -267,7 +273,27 @@ class LabelledExamples:
     if len(self.pids) != self.features.shape[0]:
       raise ValueError(f"len(pids) is {len(self.pids)} "
                        f"but len(labels) is {len(self.labels)}")
-    
+  
+  @classmethod
+  def merge(
+    cls,
+    first: "LabelledExamples",
+    second: "LabelledExamples",
+    second_weight_scale: float
+  ) -> "LabelledExamples":
+    merge_pids = first.pids + second.pids
+    merge_feats = numpy.vstack([first.features, second.features])
+    merge_labels = first.labels + second.labels
+    merge_weights = (
+      first.weights +
+      tuple(second_weight_scale * wi for wi in second.weights)
+    )
+    return LabelledExamples(
+      pids=merge_pids,
+      features=merge_feats,
+      labels=merge_labels,
+      weights=merge_weights
+    )    
 
 
 def build_labelled_examples(
@@ -304,21 +330,25 @@ def build_labelled_examples(
   ).reshape((1, NUM_FEATURES))
   return LabelledExamples(
     pids=tuple(pids),
-    features=(matrix - mu) / sig,
+    features=matrix, # (matrix - mu) / sig,
     labels=tuple(labels),
     weights=tuple(weights)
   )
 
 
 def main():
+  s21 = SeasonStats(SEASON_FILES_2021, "REG")
   s22 = SeasonStats(SEASON_FILES_2022, "REG")
   s23 = SeasonStats(SEASON_FILES_2023, "REG")
+  r21 = WeekOneLeague(ROSTER_FILE_2021)
   r22 = WeekOneLeague(ROSTER_FILE_2022)
   r23 = WeekOneLeague(ROSTER_FILE_2023)
 
-  training_data = build_labelled_examples(
+  s23_from_s22 = build_labelled_examples(
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
-
+  s22_from_s21 = build_labelled_examples(
+    prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
+  training_data = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
 
   params = {"C": [1, 3, 10, 30, 100, 300, 1000]}
   base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
@@ -342,9 +372,9 @@ def main():
     training_data.labels,
     sample_weight=training_data.weights
   )
-  preds = svr.predict(training_data.features)
+  preds = svr.predict(s23_from_s22.features)
   print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr_teams")
-  for pid, pred, actual in zip(training_data.pids, preds, training_data.labels):
+  for pid, pred, actual in zip(s23_from_s22.pids, preds, s23_from_s22.labels):
     s23_pstats = s23.get_player_stats(pid)
     try:
       s22_idp = s22.get_player_stats(pid).idp_score()
@@ -354,9 +384,12 @@ def main():
       f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
     
   print("\n", training_data.features.shape, len(training_data.labels))
+  print(training_data.features.var())
   print(gscv.cv_results_["mean_test_score"])
   print(gscv.cv_results_["rank_test_score"])
   print(gscv.best_score_, gscv.best_index_)
+  print(svr.score(
+    s23_from_s22.features, s23_from_s22.labels, s23_from_s22.weights))
   print(gscv.best_params_)
 
 

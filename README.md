@@ -477,3 +477,54 @@ anyway.
 
 It does land on a higher value of `C`, suggesting less regularization. Maybe
 I just need a finer grid search space.
+
+[Commit with this code: d4c8414](https://github.com/bgawalt/lombardotron/blob/d4c8414627fea8861b43bab61f61ff53fc6a86fc/lombardotron.py)
+
+### Round 7: Train over the '21-predicting-'22 data as well
+
+The usual advice to improve performance: Just add more data.
+
+In this case, I just set up a new set of examples, where it associates
+season stats from 2021-22 with 2022-23 IDP. Then I just stack those with the
+same predict-'23-from-'22 examples I'd used prior.
+
+```
+[... predicting players...]
+00-0038567      Chad Ryland     74.9    0.0     52.6
+00-0038905      Blake Grupe     147.1   0.0     19.9
+
+ (3258, 230) 3258
+[0.39131911 0.42405253 0.46827677 0.49297343 0.49006507 0.47552557
+ 0.45282034]
+[7 6 4 1 2 3 5]
+0.4929734293867343 3
+0.5841378894836785
+{'C': 30}
+```
+
+That 0.58 is the coefficient of determination with the '21 data included.
+But when I try to throw that data away, by setting its sample weight to 0,
+I get... better performance??
+
+```
+00-0038567      Chad Ryland     74.9    0.0     53.3
+00-0038905      Blake Grupe     147.1   0.0     21.7
+
+ (3258, 230) 3258
+[0.35936378 0.40567583 0.44308098 0.48224005 0.48359064 0.45542449
+ 0.40925611]
+[7 6 4 2 1 3 5]
+0.4835906388223715 4
+0.6259215572075698
+{'C': 100}
+```
+
+Better on the '22-to-'23 set, at least; the crossvalidation score is somehow
+worse than when the weight is non-zero, but not as bad as Round 5's 0.43.
+
+I believe what's happening here has to do with how `gamma` is calculated for
+this SVR: the `scale` setting sets `gamma` inversely proportional to
+`feature_matrix.var()`. When I include the new '21-to'22 data, that rises from
+3975.5 on '22-'23 alone, to 4270.62. That change ignores the weights I'm passing
+in, which I bet is why setting weights to zero but still including the examples
+in the matrix is having an impact on predictions.
