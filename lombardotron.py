@@ -350,7 +350,11 @@ def main():
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   training_data = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
 
-  params = {"C": [1, 3, 10, 30, 100, 300, 1000]}
+  gamma_base = 1 / (NUM_FEATURES * training_data.features.var())
+  params = {
+    "C": [225, 250, 275],
+    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
+  }
   base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
   
   k = 7
@@ -365,8 +369,9 @@ def main():
     sample_weight=training_data.weights
   )
   best_c = gscv.best_params_["C"]
+  best_gamma = gscv.best_params_["gamma"]
   
-  svr = svm.SVR(kernel="rbf", C=best_c, gamma="scale", epsilon=5)
+  svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
   svr.fit(
     training_data.features,
     training_data.labels,
@@ -390,7 +395,7 @@ def main():
   print(gscv.best_score_, gscv.best_index_)
   print(svr.score(
     s23_from_s22.features, s23_from_s22.labels, s23_from_s22.weights))
-  print(gscv.best_params_)
+  print(gscv.best_params_, best_gamma/gamma_base)
 
 
 if __name__ == "__main__":

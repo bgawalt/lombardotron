@@ -528,3 +528,94 @@ this SVR: the `scale` setting sets `gamma` inversely proportional to
 3975.5 on '22-'23 alone, to 4270.62. That change ignores the weights I'm passing
 in, which I bet is why setting weights to zero but still including the examples
 in the matrix is having an impact on predictions.
+
+[Commit with this code: 519142f](https://github.com/bgawalt/lombardotron/blob/519142f1acb94b131ea5e1953c1830bf2c98c336/lombardotron.py)
+
+### Round 8: Crossvalidate RBF's scale parameter
+
+
+  params = {
+    "C": [10, 30, 100, 300],
+    "gamma": [g * gamma_base for g in [0.5, 1, 2]]
+  }
+
+```
+00-0038567      Chad Ryland     74.9    0.0     51.3
+00-0038905      Blake Grupe     147.1   0.0     18.9
+
+ (3258, 230) 3258
+4270.6258428025785
+[0.44874138 0.46789136 0.47854428 0.48987258 0.49346206 0.48580875
+ 0.501204   0.49041368 0.48083505 0.49555759 0.47481603 0.45979265]
+[12 10  8  5  3  6  1  4  7  2  9 11]
+0.5012039960914974 6
+0.5917345789413619
+{'C': 100, 'gamma': np.float64(5.090385164839542e-07)} 0.5
+```
+
+
+  params = {
+    "C": [50, 100, 200],
+    "gamma": [g * gamma_base for g in [0.25, 0.5, 1]]
+  }
+
+```
+00-0038567      Chad Ryland     74.9    0.0     48.5
+00-0038905      Blake Grupe     147.1   0.0     17.1
+
+ (3258, 230) 3258
+4270.6258428025785
+[0.48483355 0.4985056  0.49390793 0.4996278  0.501204   0.49041368
+ 0.50249041 0.49897089 0.4837363 ]
+[8 5 6 3 2 7 1 4 9]
+0.5024904050401131 6
+0.5854310518457845
+{'C': 200, 'gamma': np.float64(2.545192582419771e-07)} 0.25
+```
+
+
+  params = {
+    "C": [150, 200, 250],
+    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
+  }
+
+```
+00-0038567      Chad Ryland     74.9    0.0     49.1
+00-0038905      Blake Grupe     147.1   0.0     17.6
+
+ (3258, 230) 3258
+4270.6258428025785
+[0.49300778 0.50202266 0.50045794 0.49783107 0.50249041 0.49897089
+ 0.49999305 0.50293959 0.49675734]
+[9 3 4 7 2 6 5 1 8]
+0.5029395858662412 7
+0.5887137604275904
+{'C': 250, 'gamma': np.float64(2.545192582419771e-07)} 0.25
+```
+
+
+  params = {
+    "C": [225, 250, 275],
+    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
+  }
+
+```
+00-0038567      Chad Ryland     74.9    0.0     49.1
+00-0038905      Blake Grupe     147.1   0.0     17.6
+
+ (3258, 230) 3258
+4270.6258428025785
+[0.4992547  0.50285679 0.49798501 0.49999305 0.50293959 0.49675734
+ 0.50039987 0.50291702 0.49611175]
+[6 3 7 5 1 8 4 2 9]
+0.5029395858662412 4
+0.5887137604275904
+{'C': 250, 'gamma': np.float64(2.545192582419771e-07)} 0.25
+```
+
+So that's pretty dialed in: a quarter the default `"scale"` value for the RBF
+distance decay factor, and a corresponding relaxation of regularization out to
+250 (up from 30!).
+
+None of these make all that large a difference though to the CV score, once
+you let the gamma parameter fall by at least half.
