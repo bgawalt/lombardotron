@@ -810,7 +810,32 @@ Ridge, though -- I dunno, it comes out looking pretty good. I think with its
 accuracy-performance, and its simplicity, and its robustness, that that's the
 leading contender for bringing into the draft on Monday.
 
+[Commit with this code: dc8dc4f](https://github.com/bgawalt/lombardotron/blob/dc8dc4f098d7551a01c9c0f242072d9fe27f1f33/README.md)
+
 ### Round 13: Lasso
 
 There's an equally simple linear model, the Lasso. I did my dissertation on the
 Lasso. Let's try out the Lasso.
+
+```
+       Train  Test
+       -----  -----
+GBR:   0.796  0.591
+Tree:  0.654  0.585
+SVR:   0.647  0.551
+OLS:   0.706  0.329
+Ridge: 0.659  0.608
+Lasso: 0.621  0.582
+
+   GradBoost min weight: 0.01
+   Tree: min weight = 0.03 , num leaves = 27
+   SVR params: C = 200 gamma factor = 0.5
+   Ridge param: 10000
+   Lasso param: 34.238647288233516
+```
+
+Hm, I'll stick with ridge. Robustness checks via reshuffling train-test split
+consistently show ridge winning.
+
+However, I'm a little nervous that performance swings so much. I think I'll
+switch the labeling scheme to predict `log(IDP)` instead of linear-scale IDP.

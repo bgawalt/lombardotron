@@ -398,23 +398,8 @@ def main():
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
-  train, test = full_dataset.split(salt="midnight again")
+  train, test = full_dataset.split(salt="gonna let it all hang out")
 
-  """"Put this on ice for now:
-  params = {
-    "min_weight_fraction_leaf": [0.005, 0.01, 0.02, 0.03, 0.04],
-  }
-  base_gbr = ensemble.GradientBoostingRegressor()
-  
-  k = 7
-  inner_cv = model_selection.KFold(
-    n_splits=k, shuffle=True, random_state=8675309)
-  
-  gscv = model_selection.GridSearchCV(
-   estimator=base_gbr, param_grid=params, cv=inner_cv)
-  gscv.fit(train.features, train.labels, sample_weight=train.weights)
-  """
-  
   best_min_weight_gbr = 0.01
   gbr = ensemble.GradientBoostingRegressor()
   gbr.fit(train.features, train.labels, train.weights)
@@ -463,6 +448,15 @@ def main():
     scaler.transform(test.features), test.labels, test.weights)
   print(f"Ridge: {rdg_train:0.3f}  {rdg_test:0.3f}")
 
+  scaler = preprocessing.StandardScaler(with_mean=False, with_std=False)
+  lss = linear_model.LassoCV(max_iter=10_000)
+  lss.fit(scaler.fit_transform(train.features), train.labels, train.weights)
+  lss_train = lss.score(
+    scaler.transform(train.features), train.labels, train.weights)
+  lss_test = lss.score(
+    scaler.transform(test.features), test.labels, test.weights)
+  print(f"Lasso: {lss_train:0.3f}  {lss_test:0.3f}")
+
   print("")
   print("   GradBoost min weight:", best_min_weight_gbr)
   print(
@@ -471,6 +465,7 @@ def main():
   )
   print("   SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
   print("   Ridge param:", rdg.alpha_)
+  print("   Lasso param:", lss.alpha_)
   print("\n")
   
   raise RuntimeError("Let's exit Early")
