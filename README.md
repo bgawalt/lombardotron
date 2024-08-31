@@ -533,11 +533,22 @@ in the matrix is having an impact on predictions.
 
 ### Round 8: Crossvalidate RBF's scale parameter
 
+Till now, the `gamma` parameter in the RBF function has been the default
+`"scale"` option, which is `1 / (n_features * features.var())`.  I can try 
+expanding my hyperparameter CV grid search by sweeping multiples of that
+"base" gamma value. Here's outcomes from swapping in different parameter sets:
 
+
+Grid:
+
+```
   params = {
     "C": [10, 30, 100, 300],
     "gamma": [g * gamma_base for g in [0.5, 1, 2]]
   }
+```
+
+Outcome: 0.592
 
 ```
 00-0038567      Chad Ryland     74.9    0.0     51.3
@@ -553,11 +564,16 @@ in the matrix is having an impact on predictions.
 {'C': 100, 'gamma': np.float64(5.090385164839542e-07)} 0.5
 ```
 
+If I narrow the `C` range and down-shift the `gamma` multiples:
 
+```
   params = {
     "C": [50, 100, 200],
     "gamma": [g * gamma_base for g in [0.25, 0.5, 1]]
   }
+```
+
+Outcome: 0.585
 
 ```
 00-0038567      Chad Ryland     74.9    0.0     48.5
@@ -573,11 +589,17 @@ in the matrix is having an impact on predictions.
 {'C': 200, 'gamma': np.float64(2.545192582419771e-07)} 0.25
 ```
 
+Recenter around the new `C = 200` -- that's high! -- and continue down-shifting
+the `gamma` multiples:
 
+```
   params = {
     "C": [150, 200, 250],
     "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
   }
+```
+
+Outcome: 0.588
 
 ```
 00-0038567      Chad Ryland     74.9    0.0     49.1
@@ -593,11 +615,16 @@ in the matrix is having an impact on predictions.
 {'C': 250, 'gamma': np.float64(2.545192582419771e-07)} 0.25
 ```
 
+Recenter on `C = 250`, same gammas:
 
+```
   params = {
     "C": [225, 250, 275],
     "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
   }
+```
+
+Outcome: 0.589
 
 ```
 00-0038567      Chad Ryland     74.9    0.0     49.1
@@ -619,3 +646,5 @@ distance decay factor, and a corresponding relaxation of regularization out to
 
 None of these make all that large a difference though to the CV score, once
 you let the gamma parameter fall by at least half.
+
+[Commit with this code: a414b0a](https://github.com/bgawalt/lombardotron/blob/a414b0ae189164d574eb1e3fef900c8754f09caa/lombardotron.py)
