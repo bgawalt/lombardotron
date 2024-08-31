@@ -684,3 +684,23 @@ I will try *one more model* and then just stick with ridge regression. Boring,
 sleepy, weighted-sum ridge regression. Oof. I think I just didn't have enough
 data to make a big, high-dimensional model work.
 ["You need 16 times the sample size to estimate an interaction than to estimate a main effect."](https://statmodeling.stat.columbia.edu/2018/03/15/need16/).
+
+[Commit with this code: 5e29061](https://github.com/bgawalt/lombardotron/blob/5e2906181cb17b963d2126651b725a56140da238/README.md)
+
+### Round 9: One (1) decision tree
+
+Let's try a single decision tree regressor:
+
+```
+Tree: 0.601
+SVR: 0.616
+OLS: -1.346
+Ridge: 0.621
+
+    Tree min weight: 0.03
+    SVR params: C = 200 gamma factor = 0.5
+    Ridge param: 5000
+```
+
+Not bad! If one tree works this well, you know what that means. Time to go get
+some more trees.

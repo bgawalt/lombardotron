@@ -9,9 +9,10 @@ from datetime import datetime
 
 import numpy
 
-from sklearn import linear_model
+from sklearn import linear_model # type: ignore
 from sklearn import model_selection # type: ignore
 from sklearn import svm # type: ignore
+from sklearn import tree # type: ignore
 
 import statvalues
 
@@ -395,26 +396,29 @@ def main():
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
+  train, test = full_dataset.split()
 
   gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
   params = {
-    "C": [150, 175, 200, 225, 250],
-    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5, 1.0]]
+    "min_weight_fraction_leaf": [0.001, 0.005, 0.01, 0.02, 0.03, 0.04],
   }
-  base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
+  base_tree = tree.DecisionTreeRegressor()
   
   k = 7
   inner_cv = model_selection.KFold(
     n_splits=k, shuffle=True, random_state=8675309)
   
-  train, test = full_dataset.split()
-  
   gscv = model_selection.GridSearchCV(
-    estimator=base_svr, param_grid=params, cv=inner_cv)
+    estimator=base_tree, param_grid=params, cv=inner_cv)
   gscv.fit(train.features, train.labels, sample_weight=train.weights)
-  best_c = gscv.best_params_["C"]
-  best_gamma = gscv.best_params_["gamma"]
+
+  best_min_weight = gscv.best_params_["min_weight_fraction_leaf"]
+  tree_ = tree.DecisionTreeRegressor(min_weight_fraction_leaf=best_min_weight)
+  tree_.fit(train.features, train.labels, train.weights)
+  print(f"Tree: {tree_.score(test.features, test.labels, test.weights):0.3f}")
   
+  best_c = 200
+  best_gamma =  0.5 * gamma_base
   svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
   svr.fit(train.features, train.labels, sample_weight=train.weights)
   print(f"SVR: {svr.score(test.features, test.labels, test.weights):0.3f}")
@@ -428,6 +432,7 @@ def main():
   print(f"Ridge: {rdg.score(test.features, test.labels, test.weights):0.3f}")
 
   print("")
+  print("    Tree min weight:", best_min_weight)
   print(
     "    SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
   print("    Ridge param:", rdg.alpha_)
