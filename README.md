@@ -726,4 +726,58 @@ Ridge: 0.621
    Ridge param: 5000
 ```
 
-Not much better than a lone tree? Which is weird?
+Not much better than a lone tree? Which is weird? When I tried 200 trees instead
+of the default 100, I got the same basic outcome.
+
+[Commit with this code: 18b9cca](https://github.com/bgawalt/lombardotron/blob/18b9cca49168e06bf3320d0d3d1400c48751b3ea/lombardotron.py)
+
+### Round 11: Redoing Ridge. (Whoops! Forgot to rescale the features!)
+
+With trees and kernel-trick SVMs, it's okay that the individual features live
+on very different scales (i.e., passing yards per game, vs. field goal misses).
+But! Linear models like ridge are *very* sensitive to this. If ridge is doing
+so well, despite my lack of basic preprocessing, I should see how well it
+works when I actually do the right thing.
+
+AND YET:
+
+```
+GBR: 0.628
+Tree: 0.601
+SVR: 0.616
+OLS: -1.346
+Ridge: 0.499
+
+   GradBoost min weight: 0.01
+   Tree: min weight = 0.03 , num leaves = 25
+   SVR params: C = 200 gamma factor = 0.5
+   Ridge param: 30
+```
+
+Doing the recommended best practice made things worse! And I got similar
+results whether I use `PowerTransformer` or `QuantileTransformer`.
+
+When I disable it with:
+
+`preprocessing.StandardScaler(with_mean=False, with_std=False)`
+
+I get the good old 0.621 results back again. Weird!! Here it is, with training
+set performance as well:
+
+```
+       Train  Test
+       -----  ----
+GBR:   0.785  0.623
+Tree:  0.644  0.601
+SVR:   0.628  0.616
+OLS:   0.701  -1.346
+Ridge: 0.660  0.621
+
+   GradBoost min weight: 0.01
+   Tree: min weight = 0.03 , num leaves = 25
+   SVR params: C = 200 gamma factor = 0.5
+   Ridge param: 5000
+```
+
+The boosted forest is overfit -- that's interesting. The other models (not you,
+OLS) seem more-or-less fine.

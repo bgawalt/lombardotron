@@ -12,6 +12,7 @@ import numpy
 from sklearn import ensemble # type: ignore
 from sklearn import linear_model # type: ignore
 from sklearn import model_selection # type: ignore
+from sklearn import preprocessing
 from sklearn import svm # type: ignore
 from sklearn import tree # type: ignore
 
@@ -399,6 +400,7 @@ def main():
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
   train, test = full_dataset.split()
 
+  """"Put this on ice for now:
   params = {
     "min_weight_fraction_leaf": [0.005, 0.01, 0.02, 0.03, 0.04],
   }
@@ -409,33 +411,57 @@ def main():
     n_splits=k, shuffle=True, random_state=8675309)
   
   gscv = model_selection.GridSearchCV(
-    estimator=base_gbr, param_grid=params, cv=inner_cv)
+   estimator=base_gbr, param_grid=params, cv=inner_cv)
   gscv.fit(train.features, train.labels, sample_weight=train.weights)
+  """
   
-  best_min_weight_gbr = gscv.best_params_["min_weight_fraction_leaf"]
+  best_min_weight_gbr = 0.01
   gbr = ensemble.GradientBoostingRegressor()
   gbr.fit(train.features, train.labels, train.weights)
-  print(f"GBR: {gbr.score(test.features, test.labels, test.weights):0.3f}")
+  print("       Train  Test")
+  print("       -----  -----")
+  print(
+    "GBR:  ",
+    f"{gbr.score(train.features, train.labels, train.weights):0.3f} ",
+    f"{gbr.score(test.features, test.labels, test.weights):0.3f}",
+  )
 
   best_min_weight = 0.03
   tree_ = tree.DecisionTreeRegressor(min_weight_fraction_leaf=best_min_weight)
   tree_.fit(train.features, train.labels, train.weights)
-  print(f"Tree: {tree_.score(test.features, test.labels, test.weights):0.3f}")
+  print(
+    "Tree: ",
+    f"{tree_.score(train.features, train.labels, train.weights):0.3f} ",
+    f"{tree_.score(test.features, test.labels, test.weights):0.3f}",
+  )
   
   best_c = 200
   gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
   best_gamma =  0.5 * gamma_base
   svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
   svr.fit(train.features, train.labels, sample_weight=train.weights)
-  print(f"SVR: {svr.score(test.features, test.labels, test.weights):0.3f}")
+  print(
+    "SVR:  ",
+    f"{svr.score(train.features, train.labels, train.weights):0.3f} ",
+    f"{svr.score(test.features, test.labels, test.weights):0.3f}",
+  )
 
   ols = linear_model.LinearRegression()
   ols.fit(train.features, train.labels, sample_weight=train.weights)
-  print(f"OLS: {ols.score(test.features, test.labels, test.weights):0.3f}")
+  print(
+    "OLS:  ",
+    f"{ols.score(train.features, train.labels, train.weights):0.3f} ",
+    f"{ols.score(test.features, test.labels, test.weights):0.3f}",
+  )
 
-  rdg = linear_model.RidgeCV(alphas=(4_000, 5_000, 6_000))
-  rdg.fit(train.features, train.labels, train.weights)
-  print(f"Ridge: {rdg.score(test.features, test.labels, test.weights):0.3f}")
+  scaler = preprocessing.StandardScaler(with_mean=False, with_std=False)
+  rdg = linear_model.RidgeCV(alphas=(1_000, 3_000, 5_000, 10_000))
+  rdg.fit(scaler.fit_transform(train.features), train.labels, train.weights)
+  rdg_train = rdg.score(
+    scaler.transform(train.features), train.labels, train.weights)
+  rdg_test = rdg.score(
+    scaler.transform(test.features), test.labels, test.weights)
+  print(f"Ridge: {rdg_train:0.3f}  {rdg_test:0.3f}")
 
   print("")
   print("   GradBoost min weight:", best_min_weight_gbr)
