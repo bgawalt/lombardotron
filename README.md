@@ -781,3 +781,36 @@ Ridge: 0.660  0.621
 
 The boosted forest is overfit -- that's interesting. The other models (not you,
 OLS) seem more-or-less fine.
+
+[Commit with this code: e9d7ffa](https://github.com/bgawalt/lombardotron/blob/e9d7ffa2ca73842774118d3cc7aed352bc8d5e82/lombardotron.py)
+
+### Round 12: Assessing overfit, *again*.
+
+When I introduce a reshuffled train-test split, I get worse results across the
+board:
+
+```
+       Train  Test
+       -----  -----
+GBR:   0.796  0.598
+Tree:  0.654  0.585
+SVR:   0.647  0.551
+OLS:   0.706  0.329
+Ridge: 0.659  0.608
+
+   GradBoost min weight: 0.01
+   Tree: min weight = 0.03 , num leaves = 27
+   SVR params: C = 200 gamma factor = 0.5
+   Ridge param: 10000
+```
+
+The SVR has an especially bad showing here.
+
+Ridge, though -- I dunno, it comes out looking pretty good. I think with its
+accuracy-performance, and its simplicity, and its robustness, that that's the
+leading contender for bringing into the draft on Monday.
+
+### Round 13: Lasso
+
+There's an equally simple linear model, the Lasso. I did my dissertation on the
+Lasso. Let's try out the Lasso.

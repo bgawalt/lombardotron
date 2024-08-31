@@ -398,7 +398,7 @@ def main():
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
-  train, test = full_dataset.split()
+  train, test = full_dataset.split(salt="midnight again")
 
   """"Put this on ice for now:
   params = {
