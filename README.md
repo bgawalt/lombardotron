@@ -689,7 +689,8 @@ data to make a big, high-dimensional model work.
 
 ### Round 9: One (1) decision tree
 
-Let's try a single decision tree regressor:
+Let's try a single decision tree regressor, where I cross-validate the minimum
+required sample weight to land in each leaf:
 
 ```
 Tree: 0.601
@@ -704,3 +705,25 @@ Ridge: 0.621
 
 Not bad! If one tree works this well, you know what that means. Time to go get
 some more trees.
+
+[Commit with this code: a5c4bb7](https://github.com/bgawalt/lombardotron/blob/a5c4bb797c0737456cd99717c3ab750c67d5f43b/lombardotron.py)
+
+### Round 10: Gradient Boosted Forest
+
+If I try some gradient-boosted trees, again cross-validating each tree's
+minimum sample weight per leaf, I see a new record (by a nose):
+
+```
+GBR: 0.624
+Tree: 0.601
+SVR: 0.616
+OLS: -1.346
+Ridge: 0.621
+
+   GradBoost min weight: 0.01
+   Tree min weight: 0.03
+   SVR params: C = 200 gamma factor = 0.5
+   Ridge param: 5000
+```
+
+Not much better than a lone tree? Which is weird?

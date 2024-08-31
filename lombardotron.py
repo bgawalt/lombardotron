@@ -9,6 +9,7 @@ from datetime import datetime
 
 import numpy
 
+from sklearn import ensemble # type: ignore
 from sklearn import linear_model # type: ignore
 from sklearn import model_selection # type: ignore
 from sklearn import svm # type: ignore
@@ -398,26 +399,31 @@ def main():
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
   train, test = full_dataset.split()
 
-  gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
   params = {
-    "min_weight_fraction_leaf": [0.001, 0.005, 0.01, 0.02, 0.03, 0.04],
+    "min_weight_fraction_leaf": [0.005, 0.01, 0.02, 0.03, 0.04],
   }
-  base_tree = tree.DecisionTreeRegressor()
+  base_gbr = ensemble.GradientBoostingRegressor()
   
   k = 7
   inner_cv = model_selection.KFold(
     n_splits=k, shuffle=True, random_state=8675309)
   
   gscv = model_selection.GridSearchCV(
-    estimator=base_tree, param_grid=params, cv=inner_cv)
+    estimator=base_gbr, param_grid=params, cv=inner_cv)
   gscv.fit(train.features, train.labels, sample_weight=train.weights)
+  
+  best_min_weight_gbr = gscv.best_params_["min_weight_fraction_leaf"]
+  gbr = ensemble.GradientBoostingRegressor()
+  gbr.fit(train.features, train.labels, train.weights)
+  print(f"GBR: {gbr.score(test.features, test.labels, test.weights):0.3f}")
 
-  best_min_weight = gscv.best_params_["min_weight_fraction_leaf"]
+  best_min_weight = 0.03
   tree_ = tree.DecisionTreeRegressor(min_weight_fraction_leaf=best_min_weight)
   tree_.fit(train.features, train.labels, train.weights)
   print(f"Tree: {tree_.score(test.features, test.labels, test.weights):0.3f}")
   
   best_c = 200
+  gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
   best_gamma =  0.5 * gamma_base
   svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
   svr.fit(train.features, train.labels, sample_weight=train.weights)
@@ -432,10 +438,13 @@ def main():
   print(f"Ridge: {rdg.score(test.features, test.labels, test.weights):0.3f}")
 
   print("")
-  print("    Tree min weight:", best_min_weight)
+  print("   GradBoost min weight:", best_min_weight_gbr)
   print(
-    "    SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
-  print("    Ridge param:", rdg.alpha_)
+    "   Tree: min weight =", best_min_weight,
+    ", num leaves =", tree_.get_n_leaves()
+  )
+  print("   SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
+  print("   Ridge param:", rdg.alpha_)
   print("\n")
   
   raise RuntimeError("Let's exit Early")
