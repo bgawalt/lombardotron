@@ -1,6 +1,7 @@
 import collections
 import csv
 import dataclasses
+import hashlib
 import itertools
 
 from collections.abc import Iterator
@@ -8,6 +9,7 @@ from datetime import datetime
 
 import numpy
 
+from sklearn import linear_model
 from sklearn import model_selection # type: ignore
 from sklearn import svm # type: ignore
 
@@ -274,6 +276,50 @@ class LabelledExamples:
       raise ValueError(f"len(pids) is {len(self.pids)} "
                        f"but len(labels) is {len(self.labels)}")
   
+  def split(
+      self,
+      salt: str = "",
+      fraction: float = 0.8
+  ) -> tuple["LabelledExamples", "LabelledExamples"]:
+    leftp = []
+    leftf = []
+    leftl = []
+    leftw = []
+    rightp = []
+    rightf = []
+    rightl = []
+    rightw = []
+    big_number = 1000000
+    threshold = fraction * big_number
+    plw = zip(self.pids, self.labels, self.weights)
+    for i, (pid, label, weight) in enumerate(plw):
+      salty_pid = (salt + pid).encode("utf-8")
+      hashcode = int(hashlib.sha256(salty_pid).hexdigest(), 16)
+      if (hashcode % big_number) <= threshold:
+        leftp.append(pid)
+        leftf.append(i)
+        leftl.append(label)
+        leftw.append(weight)
+      else:
+        rightp.append(pid)
+        rightf.append(i)
+        rightl.append(label)
+        rightw.append(weight)
+    return (
+      LabelledExamples(
+        pids=tuple(leftp),
+        features=self.features[leftf, :],
+        labels=tuple(leftl),
+        weights=tuple(leftw)
+      ),
+      LabelledExamples(
+        pids=tuple(rightp),
+        features=self.features[rightf, :],
+        labels=tuple(rightl),
+        weights=tuple(rightw)
+      ),
+    )
+  
   @classmethod
   def merge(
     cls,
@@ -348,12 +394,12 @@ def main():
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
-  training_data = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
+  full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
 
-  gamma_base = 1 / (NUM_FEATURES * training_data.features.var())
+  gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
   params = {
-    "C": [225, 250, 275],
-    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5]]
+    "C": [150, 175, 200, 225, 250],
+    "gamma": [g * gamma_base for g in [0.125, 0.25, 0.5, 1.0]]
   }
   base_svr = svm.SVR(kernel="rbf", gamma="scale", epsilon=5)
   
@@ -361,22 +407,34 @@ def main():
   inner_cv = model_selection.KFold(
     n_splits=k, shuffle=True, random_state=8675309)
   
+  train, test = full_dataset.split()
+  
   gscv = model_selection.GridSearchCV(
     estimator=base_svr, param_grid=params, cv=inner_cv)
-  gscv.fit(
-    training_data.features,
-    training_data.labels,
-    sample_weight=training_data.weights
-  )
+  gscv.fit(train.features, train.labels, sample_weight=train.weights)
   best_c = gscv.best_params_["C"]
   best_gamma = gscv.best_params_["gamma"]
   
   svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
-  svr.fit(
-    training_data.features,
-    training_data.labels,
-    sample_weight=training_data.weights
-  )
+  svr.fit(train.features, train.labels, sample_weight=train.weights)
+  print(f"SVR: {svr.score(test.features, test.labels, test.weights):0.3f}")
+
+  ols = linear_model.LinearRegression()
+  ols.fit(train.features, train.labels, sample_weight=train.weights)
+  print(f"OLS: {ols.score(test.features, test.labels, test.weights):0.3f}")
+
+  rdg = linear_model.RidgeCV(alphas=(4_000, 5_000, 6_000))
+  rdg.fit(train.features, train.labels, train.weights)
+  print(f"Ridge: {rdg.score(test.features, test.labels, test.weights):0.3f}")
+
+  print("")
+  print(
+    "    SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
+  print("    Ridge param:", rdg.alpha_)
+  print("\n")
+  
+  raise RuntimeError("Let's exit Early")
+
   preds = svr.predict(s23_from_s22.features)
   print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr_teams")
   for pid, pred, actual in zip(s23_from_s22.pids, preds, s23_from_s22.labels):

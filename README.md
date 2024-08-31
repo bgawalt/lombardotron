@@ -648,3 +648,39 @@ None of these make all that large a difference though to the CV score, once
 you let the gamma parameter fall by at least half.
 
 [Commit with this code: a414b0a](https://github.com/bgawalt/lombardotron/blob/a414b0ae189164d574eb1e3fef900c8754f09caa/lombardotron.py)
+
+### A look back
+
+OK, enough adding more features and more data and more hyperparameter tuning.
+How much did all this effort buy me?
+
+Let's answer this with an honest-to-God training/testing split.
+
+If I compare the SVR, to the linear regression I started with, plus a
+cross-validated ridge regression, I see:
+
+```
+SVR: 0.616
+OLS: -1.346
+Ridge: 0.617
+
+    SVR params: C = 200 gamma factor = 0.5
+    Ridge param: 3000
+```
+
+Well, well, well. The unregularized OLS has a *negative* coefficient of
+determination, which Sci Kit Learn describes as:
+
+> The best possible score is 1.0 and it can be negative (because the model
+> can be arbitrarily worse). 
+
+-1.35 is worse! It's like, twice as bad as just guessing the average IDP value.
+
+Hence my trying the ridge. And the ridge regression: can explain more variance
+(has a higher coefficient of determination) than the fancy, expensive,
+harder-to-tune SVM.
+
+I will try *one more model* and then just stick with ridge regression. Boring,
+sleepy, weighted-sum ridge regression. Oof. I think I just didn't have enough
+data to make a big, high-dimensional model work.
+["You need 16 times the sample size to estimate an interaction than to estimate a main effect."](https://statmodeling.stat.columbia.edu/2018/03/15/need16/).
