@@ -197,6 +197,9 @@ class WeekOnePlayer:
   """Details about a player just before a season's Week 1 kickoff."""
   pid: str
   name: str
+  short_name: str
+  team: str
+
   position: str
   active: bool
   age: float
@@ -236,6 +239,8 @@ class WeekOnePlayer:
     return WeekOnePlayer(
       pid=pid,
       name=row["full_name"],
+      short_name=f'{row["first_name"][0]}.{row["last_name"]}',
+      team=row["team"],
       position=row["position"],
       active=(row["status"] == "ACT"),
       age=age,
@@ -422,7 +427,7 @@ def ridge_param_search(train: LabelledExamples) -> float:
   alphas=numpy.logspace(numpy.log10(lo), numpy.log10(hi), num=10)
   rdg = linear_model.RidgeCV(alphas=alphas)
   rdg.fit(train.features, train.labels, train.weights)
-  return rdg.alpha_
+  return rdg.alpha_ # type: ignore
 
 
 def main():
@@ -451,7 +456,10 @@ def main():
     "pid",
     "full_name",
     "position",
-    "predicted_idp"
+    "team",
+    "predicted_idp",
+    "drafted",
+    "short_name",
   ]
   with open(sys.argv[1], "wt", newline="") as outfile:
     writer = csv.DictWriter(outfile, fieldnames=field_names)
@@ -462,7 +470,10 @@ def main():
         "pid": pid,
         "full_name": player.name,
         "position": player.position,
+        "team": player.team,
         "predicted_idp": f"{pred:0.3f}",
+        "drafted": "",
+        "short_name": player.short_name,
       })
 
   
