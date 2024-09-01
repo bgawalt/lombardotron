@@ -43,6 +43,9 @@ https://nflreadr.nflverse.com/articles/dictionary_player_stats.html
 
 ### Team Changes
 
+(**See update below.**  I wrote this early in the project, and then added the
+update over a week later.)
+
 How often do players change teams in a regular+post season? Some guys see as
 many as five different teams:
 
@@ -80,6 +83,28 @@ About one in six players get traded at least once. So not a totally ignorable
 corner case.
 
 [Commit with this code: 3cfbe72](https://github.com/bgawalt/lombardotron/blob/3cfbe7256c98c3e22598538eb114b79a2862df5f/lombardotron.py)
+
+**UPDATE:** League commish Brandon says that those numbers are nonsensical.
+No one actually moves around that much; barely anyone moves around within a
+season. It's not major league baseball, where players move around so much
+[you see one guy play on both teams in the same game](https://www.mlb.com/news/danny-jansen-plays-for-two-teams-in-same-game).
+
+But somehow, this dataset says Mike Evans, wide receiver, did a lot of work for
+Tampa Bay, but logged exactly one solo defensive tackle on each of: Arizona,
+San Francisco, Cincinnati, and Dallas:
+
+```cpp
+$ grep "00-0031408" lombardotron/data/player_stats_*2022.csv | grep "REG,"
+lombardotron/data/player_stats_def_season_2022.csv:2022,REG,00-0031408,M.Evans,Mike Evans,1,WR,WR,"https://static.www.nfl.com/image/private/f_auto,q_auto/league/w6eq27k2xs8vawwgkzbl",ARI,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+lombardotron/data/player_stats_def_season_2022.csv:2022,REG,00-0031408,M.Evans,Mike Evans,1,WR,WR,"https://static.www.nfl.com/image/private/f_auto,q_auto/league/w6eq27k2xs8vawwgkzbl",CIN,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+lombardotron/data/player_stats_def_season_2022.csv:2022,REG,00-0031408,M.Evans,Mike Evans,1,WR,WR,"https://static.www.nfl.com/image/private/f_auto,q_auto/league/w6eq27k2xs8vawwgkzbl",DAL,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+lombardotron/data/player_stats_def_season_2022.csv:2022,REG,00-0031408,M.Evans,Mike Evans,1,WR,WR,"https://static.www.nfl.com/image/private/f_auto,q_auto/league/w6eq27k2xs8vawwgkzbl",SF,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+lombardotron/data/player_stats_season_2022.csv:2022,REG,00-0031408,M.Evans,Mike Evans,WR,WR,"https://static.www.nfl.com/image/private/f_auto,q_auto/league/w6eq27k2xs8vawwgkzbl",15,TB,0,0,0,0,0,0,0,0,0,0,0,0,,0,,,0,0,0,0,0,0,,0,77,127,1124,6,0,0,1677,216,52,27.0382981927542,0,0.670244484197973,0.195084485407066,0.363380281690141,0.546992925293698,0,148.4,225.4
+```
+
+So that's not true, or at least whatever it's meant to encode, it's not "this
+guy played wide receiver for fifteen games with Tampa Bay and then also four
+other games in four other teams."
 
 ### Rookies and Retirement
 
@@ -835,7 +860,10 @@ Lasso: 0.621  0.582
 ```
 
 Hm, I'll stick with ridge. Robustness checks via reshuffling train-test split
-consistently show ridge winning.
+consistently show ridge winning. Btw, just like with ridge, rescaling the
+features was counterproductive.
 
 However, I'm a little nervous that performance swings so much. I think I'll
 switch the labeling scheme to predict `log(IDP)` instead of linear-scale IDP.
+
+[Commit with this code: 4b87352](https://github.com/bgawalt/lombardotron/blob/4b87352994e5fc41b0d8545e8ec3fc23ccea1e5c/lombardotron.py)
