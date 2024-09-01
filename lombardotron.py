@@ -9,11 +9,7 @@ from datetime import datetime
 
 import numpy
 
-from sklearn import ensemble # type: ignore
 from sklearn import linear_model # type: ignore
-from sklearn import metrics
-from sklearn import model_selection # type: ignore
-from sklearn import preprocessing
 
 import statvalues
 
@@ -359,7 +355,7 @@ def build_labelled_examples(
       continue
     pids.append(pid)
     next_season_stats = next_season.get_player_stats(pid)
-    labels.append(numpy.log2(max(next_season_stats.idp_score(), 1)))
+    labels.append(next_season_stats.idp_score())
     weights.append(next_season_stats.weight())
     vi = numpy.zeros((1, NUM_FEATURES), float)
     vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
@@ -384,6 +380,22 @@ def build_labelled_examples(
   )
 
 
+def ridge_param_search(train: LabelledExamples) -> float:
+  """Steadily narrow a range of log-spaced alphas searched by RidgeCV."""
+  lo, hi = (0.01, 100_000_000)  # Powers of ten
+  while hi > (1.1 * lo):
+    alphas=numpy.logspace(numpy.log10(lo), numpy.log10(hi), num=10)
+    rdg = linear_model.RidgeCV(alphas=alphas)
+    rdg.fit(train.features, train.labels, train.weights)
+    best_idx = list(alphas).index(rdg.alpha_)
+    lo = alphas[best_idx - 1] if best_idx != 0 else alphas[best_idx]
+    hi = alphas[best_idx + 1] if best_idx != 0 else alphas[best_idx]
+  alphas=numpy.logspace(numpy.log10(lo), numpy.log10(hi), num=10)
+  rdg = linear_model.RidgeCV(alphas=alphas)
+  rdg.fit(train.features, train.labels, train.weights)
+  return rdg.alpha_
+
+
 def main():
   s21 = SeasonStats(SEASON_FILES_2021, "REG")
   s22 = SeasonStats(SEASON_FILES_2022, "REG")
@@ -396,68 +408,14 @@ def main():
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
-  full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
-  train, test = full_dataset.split(salt="old king log")
+  train = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
 
-  best_min_weight_gbr = 0.01
-  gbr = ensemble.GradientBoostingRegressor()
-  gbr.fit(train.features, train.labels, train.weights)
-  gbr_train = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in train.labels), float),
-    y_pred=numpy.fromiter((2**pi for pi in gbr.predict(train.features)), float),
-    sample_weight=train.weights,
-  )
-  gbr_test = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in test.labels), float),
-    y_pred=numpy.fromiter((2**pi for pi in gbr.predict(test.features)), float),
-    sample_weight=test.weights,
-  )
-  print(f"GBR:   {gbr_train:0.3f}  {gbr_test:0.3f}")
+  best_alpha = sorted([ridge_param_search(train) for _ in range(21)])[10]
+  rdg = linear_model.Ridge(alpha=best_alpha)
+  rdg.fit(train.features, train.labels, train.weights)
+  preds = rdg.predict(s23_from_s22.features)
 
-  scaler = preprocessing.QuantileTransformer()
-  rdg = linear_model.RidgeCV(alphas=(0.1, 0.3, 1, 3, 10, 30, 100, 300))
-  rdg.fit(scaler.fit_transform(train.features), train.labels, train.weights)
-  rdg_train = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in train.labels), float),
-    y_pred=numpy.fromiter(
-      (2**pi for pi in rdg.predict(scaler.transform(train.features))), float),
-    sample_weight=train.weights,
-  )
-  rdg_test = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in test.labels), float),
-    y_pred=numpy.fromiter(
-      (2**pi for pi in rdg.predict(scaler.transform(test.features))), float),
-    sample_weight=test.weights,
-  )
-  print(f"Ridge: {rdg_train:0.3f}  {rdg_test:0.3f}")
-
-  scaler = preprocessing.QuantileTransformer()
-  lss = linear_model.LassoCV(max_iter=10_000)
-  lss.fit(scaler.fit_transform(train.features), train.labels, train.weights)
-  lss_train = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in train.labels), float),
-    y_pred=numpy.fromiter(
-      (2**pi for pi in lss.predict(scaler.transform(train.features))), float),
-    sample_weight=train.weights,
-  )
-  lss_test = metrics.r2_score(
-    y_true=numpy.fromiter((2**li for li in test.labels), float),
-    y_pred=numpy.fromiter(
-      (2**pi for pi in lss.predict(scaler.transform(test.features))), float),
-    sample_weight=test.weights,
-  )
-  print(f"Lasso: {lss_train:0.3f}  {lss_test:0.3f}")
-
-  print("")
-  print("   GradBoost min weight:", best_min_weight_gbr)
-  print("   Ridge param:", rdg.alpha_)
-  print("   Lasso param:", lss.alpha_)
-  print("\n")
-  
-  raise RuntimeError("Let's exit Early")
-
-  preds = svr.predict(s23_from_s22.features)
-  print("pid\tname\tactual_idp_23\tpred_idp_22\tpred_svr_teams")
+  print("pid\tname\tactual_idp_23\tpred_mode\tpred")
   for pid, pred, actual in zip(s23_from_s22.pids, preds, s23_from_s22.labels):
     s23_pstats = s23.get_player_stats(pid)
     try:
@@ -465,16 +423,9 @@ def main():
     except:
       s22_idp = 0
     print(
-      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\t{s22_idp:0.1f}\t{pred:0.1f}")
-    
-  print("\n", training_data.features.shape, len(training_data.labels))
-  print(training_data.features.var())
-  print(gscv.cv_results_["mean_test_score"])
-  print(gscv.cv_results_["rank_test_score"])
-  print(gscv.best_score_, gscv.best_index_)
-  print(svr.score(
-    s23_from_s22.features, s23_from_s22.labels, s23_from_s22.weights))
-  print(gscv.best_params_, best_gamma/gamma_base)
+      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\tRIDGE\t{pred:0.1f}")
+    print(
+      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\tIDP_22\t{s22_idp:0.1f}")
 
 
 if __name__ == "__main__":

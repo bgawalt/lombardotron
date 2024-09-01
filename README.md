@@ -899,3 +899,15 @@ looked at log-scale R^2, weren't amazing.
 Plus I reshuffled the train-test split a bunch and didn't see anything mind
 blowing there, either. And applying preprocessing transforms like
 standard-scaling or quantile-transforming didn't help.
+
+[Commit with this code: bedc15b](https://github.com/bgawalt/lombardotron/blob/bedc15bfec76d4121b67b0788135efaed1dcf0dd/lombardotron.py)
+
+### Round 15: Precisely cross-validated ridge
+
+I will use ridge regression to rank players for this draft. I will zero in on
+a very precise regularization parameter, using cross-validation over the full
+dataset. It lands at 8774.04.
+
+Here's its training-set error plot:
+
+![Predicting '23 Total IDP from '22 stats](fig/ridge_scatter.png)
