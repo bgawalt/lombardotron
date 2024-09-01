@@ -170,7 +170,7 @@ linear and log scale, for the 2023-24 season:
 
 ![IDP Score Histogram](fig/idp_histogram.png)
 
-![IDP Score Histogram, Log Scale](fig/idp_histogram_log.png)
+![IDP Score Histogram, y-axis in Log Scale](fig/idp_histogram_log.png)
 
 [Commit with this code: 1600d74](https://github.com/bgawalt/lombardotron/blob/1600d74f4f316309844f654d4dd0a97ff325bfba/lombardotron.py)
 
@@ -867,3 +867,35 @@ However, I'm a little nervous that performance swings so much. I think I'll
 switch the labeling scheme to predict `log(IDP)` instead of linear-scale IDP.
 
 [Commit with this code: 4b87352](https://github.com/bgawalt/lombardotron/blob/4b87352994e5fc41b0d8545e8ec3fc23ccea1e5c/lombardotron.py)
+
+### Round 14: Predict Log(IDP)
+
+One thing I looked into on a whim: we have histograms of player's IDP totals,
+but what does that look like on a log-scale? Answer: much more Gaussian.
+
+![Log_2{IDP Score} Histogram, y-axis in linear Scale](fig/idp_log_histogram.png)
+
+Maybe predicting log{performance} will work better than just guessing 
+performance?
+
+Not a bad theory, but, when I look for the coefficient of determination on the
+original linear scale, I don't see anything impressive:
+
+```
+GBR:   0.667  0.559
+Ridge: 0.462  0.367
+Lasso: 0.409  0.339
+
+   GradBoost min weight: 0.01
+   Ridge param: 3.0
+   Lasso param: 0.00402917086685456
+```
+
+Gradient boosting is unaffected (not a big surprise, it's just sorting the 
+training examples by label value, which a log transformation does re-order).
+The linear models are much worse on the linear-scale R^2 measure, and when I
+looked at log-scale R^2, weren't amazing.
+
+Plus I reshuffled the train-test split a bunch and didn't see anything mind
+blowing there, either. And applying preprocessing transforms like
+standard-scaling or quantile-transforming didn't help.

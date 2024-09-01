@@ -11,10 +11,9 @@ import numpy
 
 from sklearn import ensemble # type: ignore
 from sklearn import linear_model # type: ignore
+from sklearn import metrics
 from sklearn import model_selection # type: ignore
 from sklearn import preprocessing
-from sklearn import svm # type: ignore
-from sklearn import tree # type: ignore
 
 import statvalues
 
@@ -360,7 +359,7 @@ def build_labelled_examples(
       continue
     pids.append(pid)
     next_season_stats = next_season.get_player_stats(pid)
-    labels.append(next_season_stats.idp_score())
+    labels.append(numpy.log2(max(next_season_stats.idp_score(), 1)))
     weights.append(next_season_stats.weight())
     vi = numpy.zeros((1, NUM_FEATURES), float)
     vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
@@ -398,72 +397,59 @@ def main():
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   full_dataset = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
-  train, test = full_dataset.split(salt="gonna let it all hang out")
+  train, test = full_dataset.split(salt="old king log")
 
   best_min_weight_gbr = 0.01
   gbr = ensemble.GradientBoostingRegressor()
   gbr.fit(train.features, train.labels, train.weights)
-  print("       Train  Test")
-  print("       -----  -----")
-  print(
-    "GBR:  ",
-    f"{gbr.score(train.features, train.labels, train.weights):0.3f} ",
-    f"{gbr.score(test.features, test.labels, test.weights):0.3f}",
+  gbr_train = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in train.labels), float),
+    y_pred=numpy.fromiter((2**pi for pi in gbr.predict(train.features)), float),
+    sample_weight=train.weights,
   )
+  gbr_test = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in test.labels), float),
+    y_pred=numpy.fromiter((2**pi for pi in gbr.predict(test.features)), float),
+    sample_weight=test.weights,
+  )
+  print(f"GBR:   {gbr_train:0.3f}  {gbr_test:0.3f}")
 
-  best_min_weight = 0.03
-  tree_ = tree.DecisionTreeRegressor(min_weight_fraction_leaf=best_min_weight)
-  tree_.fit(train.features, train.labels, train.weights)
-  print(
-    "Tree: ",
-    f"{tree_.score(train.features, train.labels, train.weights):0.3f} ",
-    f"{tree_.score(test.features, test.labels, test.weights):0.3f}",
-  )
-  
-  best_c = 200
-  gamma_base = 1 / (NUM_FEATURES * full_dataset.features.var())
-  best_gamma =  0.5 * gamma_base
-  svr = svm.SVR(kernel="rbf", C=best_c, gamma=best_gamma, epsilon=5)
-  svr.fit(train.features, train.labels, sample_weight=train.weights)
-  print(
-    "SVR:  ",
-    f"{svr.score(train.features, train.labels, train.weights):0.3f} ",
-    f"{svr.score(test.features, test.labels, test.weights):0.3f}",
-  )
-
-  ols = linear_model.LinearRegression()
-  ols.fit(train.features, train.labels, sample_weight=train.weights)
-  print(
-    "OLS:  ",
-    f"{ols.score(train.features, train.labels, train.weights):0.3f} ",
-    f"{ols.score(test.features, test.labels, test.weights):0.3f}",
-  )
-
-  scaler = preprocessing.StandardScaler(with_mean=False, with_std=False)
-  rdg = linear_model.RidgeCV(alphas=(1_000, 3_000, 5_000, 10_000))
+  scaler = preprocessing.QuantileTransformer()
+  rdg = linear_model.RidgeCV(alphas=(0.1, 0.3, 1, 3, 10, 30, 100, 300))
   rdg.fit(scaler.fit_transform(train.features), train.labels, train.weights)
-  rdg_train = rdg.score(
-    scaler.transform(train.features), train.labels, train.weights)
-  rdg_test = rdg.score(
-    scaler.transform(test.features), test.labels, test.weights)
+  rdg_train = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in train.labels), float),
+    y_pred=numpy.fromiter(
+      (2**pi for pi in rdg.predict(scaler.transform(train.features))), float),
+    sample_weight=train.weights,
+  )
+  rdg_test = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in test.labels), float),
+    y_pred=numpy.fromiter(
+      (2**pi for pi in rdg.predict(scaler.transform(test.features))), float),
+    sample_weight=test.weights,
+  )
   print(f"Ridge: {rdg_train:0.3f}  {rdg_test:0.3f}")
 
-  scaler = preprocessing.StandardScaler(with_mean=False, with_std=False)
+  scaler = preprocessing.QuantileTransformer()
   lss = linear_model.LassoCV(max_iter=10_000)
   lss.fit(scaler.fit_transform(train.features), train.labels, train.weights)
-  lss_train = lss.score(
-    scaler.transform(train.features), train.labels, train.weights)
-  lss_test = lss.score(
-    scaler.transform(test.features), test.labels, test.weights)
+  lss_train = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in train.labels), float),
+    y_pred=numpy.fromiter(
+      (2**pi for pi in lss.predict(scaler.transform(train.features))), float),
+    sample_weight=train.weights,
+  )
+  lss_test = metrics.r2_score(
+    y_true=numpy.fromiter((2**li for li in test.labels), float),
+    y_pred=numpy.fromiter(
+      (2**pi for pi in lss.predict(scaler.transform(test.features))), float),
+    sample_weight=test.weights,
+  )
   print(f"Lasso: {lss_train:0.3f}  {lss_test:0.3f}")
 
   print("")
   print("   GradBoost min weight:", best_min_weight_gbr)
-  print(
-    "   Tree: min weight =", best_min_weight,
-    ", num leaves =", tree_.get_n_leaves()
-  )
-  print("   SVR params: C =", best_c, "gamma factor =", best_gamma / gamma_base)
   print("   Ridge param:", rdg.alpha_)
   print("   Lasso param:", lss.alpha_)
   print("\n")
