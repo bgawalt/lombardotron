@@ -3,6 +3,7 @@ import csv
 import dataclasses
 import hashlib
 import itertools
+import sys
 
 from collections.abc import Iterator
 from datetime import datetime
@@ -195,6 +196,8 @@ class SeasonStats:
 class WeekOnePlayer:
   """Details about a player just before a season's Week 1 kickoff."""
   pid: str
+  name: str
+  position: str
   active: bool
   age: float
   height: float
@@ -232,6 +235,8 @@ class WeekOnePlayer:
     "entry_year,rookie_year,draft_club,draft_number"
     return WeekOnePlayer(
       pid=pid,
+      name=row["full_name"],
+      position=row["position"],
       active=(row["status"] == "ACT"),
       age=age,
       height=float(row["height"]),
@@ -367,17 +372,41 @@ def build_labelled_examples(
       vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
     features.append(vi)
   matrix = numpy.vstack(features)
-  mu = matrix.mean(axis=0)
-  sig = numpy.fromiter(
-    (si if si != 0 else 1.0 for si in matrix.std(axis=0)),
-    float
-  ).reshape((1, NUM_FEATURES))
   return LabelledExamples(
     pids=tuple(pids),
-    features=matrix, # (matrix - mu) / sig,
+    features=matrix,
     labels=tuple(labels),
     weights=tuple(weights)
   )
+
+
+def build_unlabelled_examples(
+    prev_roster: WeekOneLeague,
+    prev_season: SeasonStats,
+    next_roster: WeekOneLeague,
+) -> LabelledExamples:
+  pids = []
+  features = []
+  prev_pids = set(prev_season.player_ids)
+  for pid in next_roster.players:
+    pids.append(pid)
+    vi = numpy.zeros((1, NUM_FEATURES), float)
+    vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
+    if pid in prev_roster.players:
+      vi[0, NUM_ROSTER_FEATURES:(2 * NUM_ROSTER_FEATURES)] = (
+        prev_roster.players[pid].features())
+    if pid in prev_pids:
+      prev_season_stats = prev_season.get_player_stats(pid)
+      vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
+    features.append(vi)
+  matrix = numpy.vstack(features)
+  return LabelledExamples(
+    pids=tuple(pids),
+    features=matrix,
+    labels=tuple(0 for _ in pids),
+    weights=tuple(0 for _ in pids),
+  )
+  
 
 
 def ridge_param_search(train: LabelledExamples) -> float:
@@ -403,29 +432,40 @@ def main():
   r21 = WeekOneLeague(ROSTER_FILE_2021)
   r22 = WeekOneLeague(ROSTER_FILE_2022)
   r23 = WeekOneLeague(ROSTER_FILE_2023)
+  r24 = WeekOneLeague(ROSTER_FILE_2024)
 
   s23_from_s22 = build_labelled_examples(
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
+  s24_from_s23 = build_unlabelled_examples(
+    prev_roster=r23, prev_season=s23, next_roster=r24)
+
   train = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
 
   best_alpha = sorted([ridge_param_search(train) for _ in range(21)])[10]
   rdg = linear_model.Ridge(alpha=best_alpha)
   rdg.fit(train.features, train.labels, train.weights)
-  preds = rdg.predict(s23_from_s22.features)
+  preds = rdg.predict(s24_from_s23.features)
+  field_names = [
+    "pid",
+    "full_name",
+    "position",
+    "predicted_idp"
+  ]
+  with open(sys.argv[1], "wt", newline="") as outfile:
+    writer = csv.DictWriter(outfile, fieldnames=field_names)
+    writer.writeheader()
+    for pid, pred in zip(s24_from_s23.pids, preds):
+      player = r24.players[pid]
+      writer.writerow({
+        "pid": pid,
+        "full_name": player.name,
+        "position": player.position,
+        "predicted_idp": f"{pred:0.3f}",
+      })
 
-  print("pid\tname\tactual_idp_23\tpred_mode\tpred")
-  for pid, pred, actual in zip(s23_from_s22.pids, preds, s23_from_s22.labels):
-    s23_pstats = s23.get_player_stats(pid)
-    try:
-      s22_idp = s22.get_player_stats(pid).idp_score()
-    except:
-      s22_idp = 0
-    print(
-      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\tRIDGE\t{pred:0.1f}")
-    print(
-      f"{pid}\t{s23_pstats.name}\t{actual:0.1f}\tIDP_22\t{s22_idp:0.1f}")
+  
 
 
 if __name__ == "__main__":

@@ -911,3 +911,26 @@ dataset. It lands at 8774.04.
 Here's its training-set error plot:
 
 ![Predicting '23 Total IDP from '22 stats](fig/ridge_scatter.png)
+
+[Commit with this code: 19a2a0b](https://github.com/bgawalt/lombardotron/blob/19a2a0b44ed12bbf90202d8aaa127622e7b78f02/lombardotron.py)
+
+## Ranking
+
+I can now rank everyone on the 2024 Week 1 Roster. It starts like this:
+
+pid        | full_name           | position | predicted_idp
+---------- | ------------------- | -------- | -------------
+00-0036358 | CeeDee Lamb         | WR       | 391.663
+00-0033280 | Christian McCaffrey | RB       | 345.697
+00-0033040 | Tyreek Hill         | WR       | 333.036
+00-0034857 | Josh Allen          | QB       | 331.331
+00-0034796 | Lamar Jackson       | QB       | 328.88
+00-0037834 | Brock Purdy         | QB       | 314.202
+00-0036963 | Amon-Ra St. Brown   | WR       | 305.835
+00-0035676 | A.J. Brown          | WR       | 297.603
+00-0036389 | Jalen Hurts         | QB       | 296.676
+
+I go ninth in the draft, so I'll be grabbing one of these players in the first
+round.
+
+[Commit with this code: ]
