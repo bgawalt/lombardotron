@@ -11,92 +11,14 @@ import numpy
 
 from sklearn import linear_model # type: ignore
 
-import common
 import seasonstats
+import weekonestats
 
 
-ROSTER_FILE_2021 = "./data/roster_weekly_2022.csv"
-ROSTER_FILE_2022 = "./data/roster_weekly_2022.csv"
-ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
-ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
-
-NUM_ROSTER_FEATURES = 8
-
-NUM_FEATURES = (2 * NUM_ROSTER_FEATURES) + seasonstats.NUM_SEASON_FEATURES
-
-
-@dataclasses.dataclass(frozen=True)
-class WeekOnePlayer:
-  """Details about a player just before a season's Week 1 kickoff."""
-  pid: str
-  name: str
-  short_name: str
-  team: str
-
-  position: str
-  active: bool
-  age: float
-  height: float
-  weight: float
-  years_exp: float
-  entry_age: float
-  rookie_age: float
-  draft_number: float
-
-  def features(self) -> numpy.ndarray:
-    return numpy.array([
-      1.0 if self.active else 0.0,  # 0
-      self.age, self.height, self.weight,  # 1, 2, 3
-      self.years_exp, self.entry_age, self.rookie_age,  # 4, 5, 6
-      self.draft_number,  # 7
-    ], 
-    float).reshape((1, NUM_ROSTER_FEATURES))
-
-  @classmethod
-  def from_row(cls, row: dict[str, str]) -> 'WeekOnePlayer | None':
-    now = datetime.now()
-    pid = row["gsis_id"]
-    if not pid:
-      return None
-    if int(row["week"]) != 1:
-      return None
-    if not row["birth_date"]:
-      return None
-    birth_date = datetime.strptime(row["birth_date"], "%Y-%m-%d")
-    age = (now - birth_date).days / 365
-    entry_date = datetime(year=int(row["entry_year"]), month=9, day=1)
-    entry_age = (now - entry_date).days / 365
-    rook_date = datetime(year=int(row["rookie_year"]), month=9, day=1)
-    rook_age = (now - rook_date).days / 365
-    "entry_year,rookie_year,draft_club,draft_number"
-    return WeekOnePlayer(
-      pid=pid,
-      name=row["full_name"],
-      short_name=f'{row["first_name"][0]}.{row["last_name"]}',
-      team=row["team"],
-      position=row["position"],
-      active=(row["status"] == "ACT"),
-      age=age,
-      height=float(row["height"]),
-      weight=float(row["weight"]),
-      years_exp=float(row["years_exp"]),
-      entry_age=entry_age,
-      rookie_age=rook_age,
-      draft_number=common.empty_float(row["draft_number"], default=400)
-    )
-
-
-class WeekOneLeague:
-  """Details about all players just before a season's Week 1 kickoff."""
-
-  def __init__(self, roster_csv_filename: str):
-    self.players: dict[str, WeekOnePlayer] = {}
-    with open(roster_csv_filename, "rt") as infile:
-      for row in csv.DictReader(infile):
-        w1player = WeekOnePlayer.from_row(row)
-        if w1player is None:
-          continue
-        self.players[w1player.pid] = w1player
+NUM_FEATURES = (
+  (2 * weekonestats.NUM_WEEK_ONE_FEATURES) + 
+  seasonstats.NUM_SEASON_FEATURES
+)
 
 
 @dataclasses.dataclass
@@ -184,15 +106,16 @@ class LabelledExamples:
 
 
 def build_labelled_examples(
-    prev_roster: WeekOneLeague,
+    prev_roster: weekonestats.WeekOneLeague,
     prev_season: seasonstats.SeasonStats,
-    next_roster: WeekOneLeague,
+    next_roster: weekonestats.WeekOneLeague,
     next_season: seasonstats.SeasonStats) -> LabelledExamples:
   pids = []
   features = []
   labels = []
   weights = []
   prev_pids = set(prev_season.player_ids)
+  nwos = weekonestats.NUM_WEEK_ONE_FEATURES
   for pid in next_season.player_ids:
     if pid not in next_roster.players:
       continue
@@ -201,13 +124,12 @@ def build_labelled_examples(
     labels.append(next_season_stats.idp_score())
     weights.append(next_season_stats.weight())
     vi = numpy.zeros((1, NUM_FEATURES), float)
-    vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
+    vi[0, :nwos] = next_roster.players[pid].features()
     if pid in prev_roster.players:
-      vi[0, NUM_ROSTER_FEATURES:(2 * NUM_ROSTER_FEATURES)] = (
-        prev_roster.players[pid].features())
+      vi[0, nwos:(2 * nwos)] = prev_roster.players[pid].features()
     if pid in prev_pids:
       prev_season_stats = prev_season.get_player_stats(pid)
-      vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
+      vi[0, (2 * nwos):] = prev_season_stats.features()
     features.append(vi)
   matrix = numpy.vstack(features)
   return LabelledExamples(
@@ -219,23 +141,24 @@ def build_labelled_examples(
 
 
 def build_unlabelled_examples(
-    prev_roster: WeekOneLeague,
+    prev_roster: weekonestats.WeekOneLeague,
     prev_season: seasonstats.SeasonStats,
-    next_roster: WeekOneLeague,
+    next_roster: weekonestats.WeekOneLeague,
 ) -> LabelledExamples:
   pids = []
   features = []
   prev_pids = set(prev_season.player_ids)
+  nwos = weekonestats.NUM_WEEK_ONE_FEATURES
   for pid in next_roster.players:
     pids.append(pid)
     vi = numpy.zeros((1, NUM_FEATURES), float)
-    vi[0, :NUM_ROSTER_FEATURES] = next_roster.players[pid].features()
+    vi[0, :nwos] = next_roster.players[pid].features()
     if pid in prev_roster.players:
-      vi[0, NUM_ROSTER_FEATURES:(2 * NUM_ROSTER_FEATURES)] = (
+      vi[0, nwos:(2 * nwos)] = (
         prev_roster.players[pid].features())
     if pid in prev_pids:
       prev_season_stats = prev_season.get_player_stats(pid)
-      vi[0, (2 * NUM_ROSTER_FEATURES):] = prev_season_stats.features()
+      vi[0, (2 * nwos):] = prev_season_stats.features()
     features.append(vi)
   matrix = numpy.vstack(features)
   return LabelledExamples(
@@ -266,10 +189,10 @@ def main():
   s21 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2021, "REG")
   s22 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2022, "REG")
   s23 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2023, "REG")
-  r21 = WeekOneLeague(ROSTER_FILE_2021)
-  r22 = WeekOneLeague(ROSTER_FILE_2022)
-  r23 = WeekOneLeague(ROSTER_FILE_2023)
-  r24 = WeekOneLeague(ROSTER_FILE_2024)
+  r21 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2021)
+  r22 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2022)
+  r23 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2023)
+  r24 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2024)
 
   s23_from_s22 = build_labelled_examples(
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
