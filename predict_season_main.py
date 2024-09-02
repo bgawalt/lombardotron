@@ -5,8 +5,6 @@ import dataclasses
 import hashlib
 import sys
 
-from datetime import datetime
-
 import numpy
 
 from sklearn import linear_model # type: ignore
@@ -230,8 +228,6 @@ def main():
         "drafted": "",
         "short_name": player.short_name,
       })
-
-  
 
 
 if __name__ == "__main__":
