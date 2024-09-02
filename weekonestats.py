@@ -16,6 +16,17 @@ ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
 
 NUM_WEEK_ONE_FEATURES = 8
 
+WEEK_ONE_FEATURES = (
+  "active",
+  "age",
+  "height",
+  "weight",
+  "years_exp",
+  "years_since_entry",
+  "years_since_rookie",
+  "draft_number"
+)
+
 
 @dataclasses.dataclass(frozen=True)
 class WeekOnePlayer:

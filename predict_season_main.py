@@ -1,4 +1,13 @@
-"""Predict total IDP score earnings of players in 2024 from their 2023 stats."""
+"""Predict total IDP score earnings of players in 2024 from their 2023 stats.
+
+Produces a ranking of players, as well as a ridge regression model, and saves
+both in the CSVs at the given locations.
+
+Usage:
+
+  $ python predict_season_main.py rankings.csv ridge_coefs.csv
+
+"""
 
 import csv
 import dataclasses
@@ -16,6 +25,12 @@ import weekonestats
 NUM_FEATURES = (
   (2 * weekonestats.NUM_WEEK_ONE_FEATURES) + 
   seasonstats.NUM_SEASON_FEATURES
+)
+
+FEATURES = (
+  tuple("next_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
+  tuple("prev_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
+  tuple("prev_season_" + f for f in seasonstats.SEASON_STAT_FEATURES)
 )
 
 
@@ -101,6 +116,7 @@ class LabelledExamples:
       labels=merge_labels,
       weights=merge_weights
     )    
+
 
 
 def build_labelled_examples(
@@ -204,8 +220,10 @@ def main():
   best_alpha = sorted([ridge_param_search(train) for _ in range(21)])[10]
   rdg = linear_model.Ridge(alpha=best_alpha)
   rdg.fit(train.features, train.labels, train.weights)
+
+  # Save predictions:
   preds = rdg.predict(s24_from_s23.features)
-  field_names = [
+  ranking_fields = [
     "pid",
     "full_name",
     "position",
@@ -214,10 +232,12 @@ def main():
     "drafted",
     "short_name",
   ]
-  with open(sys.argv[1], "wt", newline="") as outfile:
-    writer = csv.DictWriter(outfile, fieldnames=field_names)
+  with open(sys.argv[1], "wt", newline="") as rankfile:
+    writer = csv.DictWriter(rankfile, fieldnames=ranking_fields)
     writer.writeheader()
-    for pid, pred in zip(s24_from_s23.pids, preds):
+    pid_pred_pairs = sorted(
+      zip(s24_from_s23.pids, preds), key=lambda t: t[1], reverse=True)
+    for pid, pred in pid_pred_pairs:
       player = r24.players[pid]
       writer.writerow({
         "pid": pid,
@@ -227,6 +247,18 @@ def main():
         "predicted_idp": f"{pred:0.3f}",
         "drafted": "",
         "short_name": player.short_name,
+      })
+  # Save model:
+  feature_std = train.features.std(axis=0)
+  coef_fields = ["feature_name", "ridge_coef", "stddev"]
+  with open(sys.argv[2], "wt", newline="") as coeffile:
+    writer = csv.DictWriter(coeffile, fieldnames=coef_fields)
+    writer.writeheader()
+    for name, coef, std in zip(FEATURES, rdg.coef_, feature_std):
+      writer.writerow({
+        "feature_name": name,
+        "ridge_coef": str(coef),
+        "stddev": std
       })
 
 
