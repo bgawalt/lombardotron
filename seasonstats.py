@@ -161,6 +161,11 @@ SEASON_FILES_2023 = SeasonFiles(
   defense_csv="./data/player_stats_def_season_2023.csv",
   kicking_csv="./data/player_stats_kicking_season_2023.csv",
 )
+SEASON_FILES_2024 = SeasonFiles(
+  offense_csv="./data/player_stats_season_2024.csv",
+  defense_csv="./data/player_stats_def_season_2024.csv",
+  kicking_csv="./data/player_stats_kicking_season_2024.csv",
+)
 
 PID_COLUMN = "player_id"
 NAME_COLUMN = "player_display_name"

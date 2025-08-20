@@ -13,6 +13,7 @@ ROSTER_FILE_2021 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2022 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
 ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
+ROSTER_FILE_2025 = "./data/roster_weekly_2025.csv"
 
 NUM_WEEK_ONE_FEATURES = 8
 
@@ -61,7 +62,8 @@ class WeekOnePlayer:
     pid = row["gsis_id"]
     if not pid:
       return None
-    if int(row["week"]) != 1:
+    week_num = 1 if not row["week"] else int(row["week"])
+    if week_num != 1:
       return None
     if not row["birth_date"]:
       return None
@@ -69,9 +71,15 @@ class WeekOnePlayer:
     age = (now - birth_date).days / 365
     entry_date = datetime.datetime(year=int(row["entry_year"]), month=9, day=1)
     entry_age = (now - entry_date).days / 365
-    rook_date = datetime.datetime(year=int(row["rookie_year"]), month=9, day=1)
+    try:
+      rook_date = datetime.datetime(year=int(row["rookie_year"]), month=9, day=1)
+    except ValueError as ve:
+      if row["status"] == "CUT":
+        print(f"\tNo rookie year for cut player {pid}")
+        return None
+      else:
+        raise ve
     rook_age = (now - rook_date).days / 365
-    "entry_year,rookie_year,draft_club,draft_number"
     return WeekOnePlayer(
       pid=pid,
       name=row["full_name"],

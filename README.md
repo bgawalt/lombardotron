@@ -41,6 +41,12 @@ The column translations are available at:
 
 https://nflreadr.nflverse.com/articles/dictionary_player_stats.html
 
+When adding a new `player_stats_def_season_20XX.csv` file, manually go in and
+replace the column `"games"` with `"def_games"`.  Similarly, when adding a
+`player_stats_kicking_season` csv, replace `"games"` with `"kck_games"`.
+This is a convention I am using to merge stats for the same player
+across offense, defense, and special teams, while still being able to validate
+that every distinct player is only tabulated once per season.
 
 ## Rankings
 

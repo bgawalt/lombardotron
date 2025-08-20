@@ -1,4 +1,4 @@
-"""Predict total IDP score earnings of players in 2024 from their 2023 stats.
+"""Predict total IDP score earnings of players in 2025 from their 2024 stats.
 
 Produces a ranking of players, as well as a ridge regression model, and saves
 both in the CSVs at the given locations.
@@ -96,19 +96,25 @@ class LabelledExamples:
       ),
     )
   
+
+  # TODO: This should just take a sequence of LabelledExamples as a single
+  # argument instead of `first`, `second`, `third`....
   @classmethod
   def merge(
     cls,
     first: "LabelledExamples",
     second: "LabelledExamples",
-    second_weight_scale: float
+    third: "LabelledExamples",
+    weight_decay: float
   ) -> "LabelledExamples":
-    merge_pids = first.pids + second.pids
-    merge_feats = numpy.vstack([first.features, second.features])
-    merge_labels = first.labels + second.labels
+    merge_pids = first.pids + second.pids + third.pids
+    merge_feats = numpy.vstack(
+      [first.features, second.features, third.features])
+    merge_labels = first.labels + second.labels + third.labels
     merge_weights = (
       first.weights +
-      tuple(second_weight_scale * wi for wi in second.weights)
+      tuple(weight_decay * swi for swi in second.weights) + 
+      tuple(weight_decay * weight_decay * twi  for twi in third.weights)
     )
     return LabelledExamples(
       pids=merge_pids,
@@ -203,26 +209,32 @@ def main():
   s21 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2021, "REG")
   s22 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2022, "REG")
   s23 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2023, "REG")
+  s24 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2024, "REG")
   r21 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2021)
   r22 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2022)
   r23 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2023)
   r24 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2024)
+  r25 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2025)
+  print("Successfully loaded data from 2021 to 2025")
 
+  s24_from_s23 = build_labelled_examples(
+    prev_roster=r23, prev_season=s23, next_roster=r24, next_season=s24)
   s23_from_s22 = build_labelled_examples(
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
-  s24_from_s23 = build_unlabelled_examples(
-    prev_roster=r23, prev_season=s23, next_roster=r24)
 
-  train = LabelledExamples.merge(s23_from_s22, s22_from_s21, 0.9)
+  s25_from_s24 = build_unlabelled_examples(
+    prev_roster=r24, prev_season=s24, next_roster=r25)
+
+  train = LabelledExamples.merge(s24_from_s23, s23_from_s22, s22_from_s21, 0.9)
 
   best_alpha = sorted([ridge_param_search(train) for _ in range(21)])[10]
   rdg = linear_model.Ridge(alpha=best_alpha)
   rdg.fit(train.features, train.labels, train.weights)
 
   # Save predictions:
-  preds = rdg.predict(s24_from_s23.features)
+  preds = rdg.predict(s25_from_s24.features)
   ranking_fields = [
     "pid",
     "full_name",
@@ -236,7 +248,7 @@ def main():
     writer = csv.DictWriter(rankfile, fieldnames=ranking_fields)
     writer.writeheader()
     pid_pred_pairs = sorted(
-      zip(s24_from_s23.pids, preds), key=lambda t: t[1], reverse=True)
+      zip(s25_from_s24.pids, preds), key=lambda t: t[1], reverse=True)
     for pid, pred in pid_pred_pairs:
       player = r24.players[pid]
       writer.writerow({
