@@ -251,6 +251,8 @@ def main():
   # Save model:
   feature_std = train.features.std(axis=0)
   coef_fields = ["feature_name", "ridge_coef", "stddev"]
+  if len(FEATURES) != len(rdg.coef_):
+    raise ValueError(f"feat {len(FEATURES)} coef {len(rdg.coef_)} std {len(feature_std)})")
   with open(sys.argv[2], "wt", newline="") as coeffile:
     writer = csv.DictWriter(coeffile, fieldnames=coef_fields)
     writer.writeheader()
