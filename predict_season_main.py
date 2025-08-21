@@ -18,19 +18,19 @@ import numpy
 
 from sklearn import linear_model # type: ignore
 
+import common
 import seasonstats
 import weekonestats
 
 
-NUM_FEATURES = (
-  (2 * weekonestats.NUM_WEEK_ONE_FEATURES) + 
-  seasonstats.NUM_SEASON_FEATURES
-)
-
 FEATURES = (
   tuple("next_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
   tuple("prev_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
-  tuple("prev_season_" + f for f in seasonstats.SEASON_STAT_FEATURES)
+  tuple("prev_season_" + f for f in seasonstats.SEASON_STAT_FEATURES) +
+  tuple("prev_season_off_games_" + t for t in common.TEAMS) + 
+  tuple("prev_season_def_games_" + t for t in common.TEAMS) + 
+  tuple("prev_season_kck_games_" + t for t in common.TEAMS) + 
+  tuple("prev_season_pos_games_" + t for t in common.POSITIONS)
 )
 
 
@@ -124,7 +124,6 @@ class LabelledExamples:
     )    
 
 
-
 def build_labelled_examples(
     prev_roster: weekonestats.WeekOneLeague,
     prev_season: seasonstats.SeasonStats,
@@ -143,7 +142,7 @@ def build_labelled_examples(
     next_season_stats = next_season.get_player_stats(pid)
     labels.append(next_season_stats.idp_score())
     weights.append(next_season_stats.weight())
-    vi = numpy.zeros((1, NUM_FEATURES), float)
+    vi = numpy.zeros((1, len(FEATURES)), float)
     vi[0, :nwos] = next_roster.players[pid].features()
     if pid in prev_roster.players:
       vi[0, nwos:(2 * nwos)] = prev_roster.players[pid].features()
@@ -171,7 +170,7 @@ def build_unlabelled_examples(
   nwos = weekonestats.NUM_WEEK_ONE_FEATURES
   for pid in next_roster.players:
     pids.append(pid)
-    vi = numpy.zeros((1, NUM_FEATURES), float)
+    vi = numpy.zeros((1, len(FEATURES)), float)
     vi[0, :nwos] = next_roster.players[pid].features()
     if pid in prev_roster.players:
       vi[0, nwos:(2 * nwos)] = (
@@ -197,8 +196,12 @@ def ridge_param_search(train: LabelledExamples) -> float:
     rdg = linear_model.RidgeCV(alphas=alphas)
     rdg.fit(train.features, train.labels, train.weights)
     best_idx = list(alphas).index(rdg.alpha_)
+    print(
+      f"For range [{lo:0.1f}, {hi:0.1f}, best alpha is {rdg.alpha_:0.1f} "
+      + f"with score {rdg.best_score_:.5f})"
+    )
     lo = alphas[best_idx - 1] if best_idx != 0 else alphas[best_idx]
-    hi = alphas[best_idx + 1] if best_idx != 0 else alphas[best_idx]
+    hi = alphas[best_idx + 1] if best_idx != len(alphas) - 1 else alphas[best_idx]
   alphas=numpy.logspace(numpy.log10(lo), numpy.log10(hi), num=10)
   rdg = linear_model.RidgeCV(alphas=alphas)
   rdg.fit(train.features, train.labels, train.weights)
@@ -219,19 +222,28 @@ def main():
 
   s24_from_s23 = build_labelled_examples(
     prev_roster=r23, prev_season=s23, next_roster=r24, next_season=s24)
+  print(s24_from_s23.features.shape)
   s23_from_s22 = build_labelled_examples(
     prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
+  print(s23_from_s22.features.shape)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
+  print(s22_from_s21.features.shape)
 
   s25_from_s24 = build_unlabelled_examples(
     prev_roster=r24, prev_season=s24, next_roster=r25)
+  print(s25_from_s24.features.shape)
 
   train = LabelledExamples.merge(s24_from_s23, s23_from_s22, s22_from_s21, 0.9)
+  print(f"Train feature matrix shape: {train.features.shape}")
 
-  best_alpha = sorted([ridge_param_search(train) for _ in range(21)])[10]
-  rdg = linear_model.Ridge(alpha=best_alpha)
+  # best_alpha = ridge_param_search(train)
+  # rdg = linear_model.Ridge(alpha=best_alpha)
+  rdg = linear_model.LinearRegression()
   rdg.fit(train.features, train.labels, train.weights)
+  print(f"OLS R-squared: {rdg.score(train.features, train.labels, sample_weight=train.weights):0.3f}")
+  print(s25_from_s24.features.shape)
+  print(rdg.coef_.shape)
 
   # Save predictions:
   preds = rdg.predict(s25_from_s24.features)
@@ -250,7 +262,7 @@ def main():
     pid_pred_pairs = sorted(
       zip(s25_from_s24.pids, preds), key=lambda t: t[1], reverse=True)
     for pid, pred in pid_pred_pairs:
-      player = r24.players[pid]
+      player = r25.players[pid]
       writer.writerow({
         "pid": pid,
         "full_name": player.name,

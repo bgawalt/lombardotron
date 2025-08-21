@@ -131,12 +131,12 @@ PREDICTORS = (
 
 SEASON_STAT_FEATURES = tuple(sorted(PREDICTORS + tuple(FANTASY_POINTS.keys())))
 
-
 NUM_SEASON_FEATURES = (
   len(SEASON_STAT_FEATURES) +
   (3 * len(common.TEAMS)) +
   len(common.POSITIONS)
 )
+
 
 @dataclasses.dataclass(frozen=True)
 class SeasonFiles:
