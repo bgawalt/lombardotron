@@ -11,3 +11,10 @@ It's like a lab notebook.
 
 I looked at the league rules.  The fantasy points for each stat seem consistent
 with last season (2024), as encoded in `seasonstats.FANTASY_POINTS`.
+
+Train-set squared error was reduced by moving from OLS to a gradient-boosting
+forest, so, that's what I'm going with this year. 
+
+For next year, I should set up actual train-test split utils to have a more
+sensible crossvalidation bakeoff between the half-dozen different models I might
+try.
