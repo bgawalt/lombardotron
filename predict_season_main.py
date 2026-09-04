@@ -305,7 +305,7 @@ def main():
         "position": player.position,
         "team": player.team,
         "predicted_idp": f"{pred:0.3f}",
-        "delta5": f"{pred:0.3f}",
+        "delta5": f"{d5:0.3f}",
         "drafted": "",
         "short_name": player.short_name,
       })
