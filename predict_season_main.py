@@ -27,10 +27,8 @@ FEATURES = (
   tuple("next_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
   tuple("prev_week_one_" + f for f in weekonestats.WEEK_ONE_FEATURES) +
   tuple("prev_season_" + f for f in seasonstats.SEASON_STAT_FEATURES) +
-  tuple("prev_season_off_games_" + t for t in common.TEAMS) + 
-  tuple("prev_season_def_games_" + t for t in common.TEAMS) + 
-  tuple("prev_season_kck_games_" + t for t in common.TEAMS) + 
-  tuple("prev_season_pos_games_" + t for t in common.POSITIONS)
+  tuple("prev_season_teams" + t for t in common.TEAMS) +  
+  tuple("prev_season_pos" + t for t in common.POSITIONS)
 )
 
 
@@ -209,30 +207,37 @@ def ridge_param_search(train: LabelledExamples) -> float:
 
 
 def main():
-  s21 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2021, "REG")
-  s22 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2022, "REG")
-  s23 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2023, "REG")
-  s24 = seasonstats.SeasonStats(seasonstats.SEASON_FILES_2024, "REG")
+  s21 = seasonstats.SeasonStats(seasonstats.SEASON_2021)
+  s22 = seasonstats.SeasonStats(seasonstats.SEASON_2022)
+  s23 = seasonstats.SeasonStats(seasonstats.SEASON_2023)
+  s24 = seasonstats.SeasonStats(seasonstats.SEASON_2024)
+  s25 = seasonstats.SeasonStats(seasonstats.SEASON_2025)
   r21 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2021)
   r22 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2022)
   r23 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2023)
   r24 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2024)
   r25 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2025)
-  print("Successfully loaded data from 2021 to 2025")
+  r26 = weekonestats.WeekOneLeague(weekonestats.ROSTER_FILE_2026)
+  print("Successfully loaded data from 2021 to 2026")
 
-  s24_from_s23 = build_labelled_examples(
-    prev_roster=r23, prev_season=s23, next_roster=r24, next_season=s24)
-  print(s24_from_s23.features.shape)
-  s23_from_s22 = build_labelled_examples(
-    prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
-  print(s23_from_s22.features.shape)
+
+  print(seasonstats.NUM_SEASON_FEATURES)
   s22_from_s21 = build_labelled_examples(
     prev_roster=r21, prev_season=s21, next_roster=r22, next_season=s22)
   print(s22_from_s21.features.shape)
+  s23_from_s22 = build_labelled_examples(
+    prev_roster=r22, prev_season=s22, next_roster=r23, next_season=s23)
+  print(s23_from_s22.features.shape)
+  s24_from_s23 = build_labelled_examples(
+      prev_roster=r23, prev_season=s23, next_roster=r24, next_season=s24)
+  print(s24_from_s23.features.shape)
+  s25_from_s24 = build_labelled_examples(
+      prev_roster=r25, prev_season=s24, next_roster=r24, next_season=s24)
+  print(s24_from_s23.features.shape)
 
-  s25_from_s24 = build_unlabelled_examples(
-    prev_roster=r24, prev_season=s24, next_roster=r25)
-  print(s25_from_s24.features.shape)
+  s26_from_s25 = build_unlabelled_examples(
+    prev_roster=r25, prev_season=s25, next_roster=r26)
+  print(s26_from_s25.features.shape)
 
   train = LabelledExamples.merge(s24_from_s23, s23_from_s22, s22_from_s21, 0.9)
   print(f"Train feature matrix shape: {train.features.shape}")
