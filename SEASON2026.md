@@ -79,3 +79,11 @@ pid,full_name,position,team,predicted_idp,drafted,short_name
 
 This was a bug due to not pointing at the right matrix for prediction; it's
 fixed now.  I should make this more robust.
+
+Upgrading to Gradient Boosting Regression made a huge difference this time!
+
+```
+Train feature matrix shape: (5824, 163)
+OLS R-squared: 0.687
+GBR R-squared: 0.767
+```

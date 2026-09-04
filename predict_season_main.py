@@ -16,7 +16,8 @@ import sys
 
 import numpy
 
-from sklearn import linear_model # type: ignore
+from sklearn import linear_model
+from sklearn import ensemble
 
 import common
 import seasonstats
@@ -247,49 +248,66 @@ def main():
   rdg = linear_model.LinearRegression()
   rdg.fit(train.features, train.labels, train.weights)
   print(f"OLS R-squared: {rdg.score(train.features, train.labels, sample_weight=train.weights):0.3f}")
+
+  gbr = ensemble.GradientBoostingRegressor()
+  gbr.fit(train.features, train.labels, train.weights)
+  print(f"GBR R-squared: {gbr.score(train.features, train.labels, sample_weight=train.weights):0.3f}")
+
   print(s26_from_s25.features.shape)
   print(rdg.coef_.shape)
 
   # Save predictions:
-  preds = rdg.predict(s26_from_s25.features)
+  preds = gbr.predict(s26_from_s25.features)
+  pid_preds ={pid: pred for pid, pred in zip(s26_from_s25.pids, preds)}
+
+  # What is each player's delta, above the fifth-best player of the same
+  # position ranked behind them?
+  d5s = {}
+  pos_preds = {}
+  for pid, pred in pid_preds.items():
+    player = r26.players[pid]
+    pos = player.position
+    if pos not in pos_preds:
+      pos_preds[pos] = []
+    pos_preds[pos].append((pid, pred))
+  for pos, pos_pidpreds in pos_preds.items():
+    spreds = sorted(list(pos_pidpreds), key=lambda t: t[1], reverse=True)
+    for i, (pid, pred) in enumerate(spreds):
+      if i + 5 < len(spreds):
+        next_option = spreds[i + 5][1]
+      else:
+        next_option = 0
+      d5s[pid] = pred - next_option
+  d5_spids = [
+    (pid, d5) for pid, d5 in
+    sorted(d5s.items(), key=lambda t: t[1], reverse=True)
+  ]
+
   ranking_fields = [
     "pid",
     "full_name",
     "position",
     "team",
     "predicted_idp",
+    "delta5",
     "drafted",
     "short_name",
   ]
   with open(sys.argv[1], "wt", newline="") as rankfile:
     writer = csv.DictWriter(rankfile, fieldnames=ranking_fields)
     writer.writeheader()
-    pid_pred_pairs = sorted(
-      zip(s26_from_s25.pids, preds), key=lambda t: t[1], reverse=True)
-    for pid, pred in pid_pred_pairs:
+    for pid, d5 in d5_spids:
       player = r26.players[pid]
+      pred = pid_preds[pid]
       writer.writerow({
         "pid": pid,
         "full_name": player.name,
         "position": player.position,
         "team": player.team,
         "predicted_idp": f"{pred:0.3f}",
+        "delta5": f"{pred:0.3f}",
         "drafted": "",
         "short_name": player.short_name,
-      })
-  # Save model:
-  feature_std = train.features.std(axis=0)
-  coef_fields = ["feature_name", "ridge_coef", "stddev"]
-  if len(FEATURES) != len(rdg.coef_):
-    raise ValueError(f"feat {len(FEATURES)} coef {len(rdg.coef_)} std {len(feature_std)})")
-  with open(sys.argv[2], "wt", newline="") as coeffile:
-    writer = csv.DictWriter(coeffile, fieldnames=coef_fields)
-    writer.writeheader()
-    for name, coef, std in zip(FEATURES, rdg.coef_, feature_std):
-      writer.writerow({
-        "feature_name": name,
-        "ridge_coef": str(coef),
-        "stddev": std
       })
 
 
