@@ -14,6 +14,7 @@ ROSTER_FILE_2022 = "./data/roster_weekly_2022.csv"
 ROSTER_FILE_2023 = "./data/roster_weekly_2023.csv"
 ROSTER_FILE_2024 = "./data/roster_weekly_2024.csv"
 ROSTER_FILE_2025 = "./data/roster_weekly_2025.csv"
+ROSTER_FILE_2026 = "./data/roster_weekly_2026.csv"
 
 NUM_WEEK_ONE_FEATURES = 8
 
