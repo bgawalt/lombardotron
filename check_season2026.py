@@ -14,10 +14,6 @@ def main():
       break
 
   for k in row:
-    print(k)
-  return
-
-  for k in row:
     if k not in seasonstats.SEASON_STAT_FEATURES:
       print(f'csv had {k} but PREDICTORS didnt')
   for k in seasonstats.SEASON_STAT_FEATURES:
