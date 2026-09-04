@@ -40,6 +40,7 @@ Patching those holes:
 *  def_penalty_yards: manually recalculate
 *  def_tackles -> split into _solo and _with_assist (and _assists)
 *  sack_yards -> def_sack_yards
+*  def_safety -> def_safeties
 *  def_fumble_recovery_{own, opp} -> fumble_recovery_{own, opp}
 *  def_fumble_recovery_yards_{own, opp} -> fumble_recovery_yards_{own, opp}
 *  sacks -> def_sacks
@@ -49,3 +50,7 @@ Patching those holes:
 *  sack_yards -> def_sack_yards
 
 ok, set em up, knock em down.
+
+I will hold out on refactoring the `def_`, `kck_` etc particulars, and instead
+try a regularized quadratic kernel.  If it's not any better than the linear
+model, *then* I might go back and manually add interaction terms.

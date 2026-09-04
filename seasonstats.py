@@ -134,34 +134,11 @@ NUM_SEASON_FEATURES = (
 )
 
 
-@dataclasses.dataclass(frozen=True)
-class SeasonFiles:
-  """Paths to CSV files describing player stats over an NFL season."""
-  offense_csv: str
-  defense_csv: str
-  kicking_csv: str
-
-
-SEASON_FILES_2021 = SeasonFiles(
-  offense_csv="./data/player_stats_season_2021.csv",
-  defense_csv="./data/player_stats_def_season_2021.csv",
-  kicking_csv="./data/player_stats_kicking_season_2021.csv",
-)
-SEASON_FILES_2022 = SeasonFiles(
-  offense_csv="./data/player_stats_season_2022.csv",
-  defense_csv="./data/player_stats_def_season_2022.csv",
-  kicking_csv="./data/player_stats_kicking_season_2022.csv",
-)
-SEASON_FILES_2023 = SeasonFiles(
-  offense_csv="./data/player_stats_season_2023.csv",
-  defense_csv="./data/player_stats_def_season_2023.csv",
-  kicking_csv="./data/player_stats_kicking_season_2023.csv",
-)
-SEASON_FILES_2024 = SeasonFiles(
-  offense_csv="./data/player_stats_season_2024.csv",
-  defense_csv="./data/player_stats_def_season_2024.csv",
-  kicking_csv="./data/player_stats_kicking_season_2024.csv",
-)
+SEASON_2021 = "./data/stats_player_reg_2021.csv"
+SEASON_2022 = "./data/stats_player_reg_2022.csv"
+SEASON_2023 = "./data/stats_player_reg_2023.csv"
+SEASON_2024 = "./data/stats_player_reg_2024.csv"
+SEASON_2025 = "./data/stats_player_reg_2025.csv"
 
 PID_COLUMN = "player_id"
 NAME_COLUMN = "player_display_name"
@@ -175,10 +152,7 @@ class PlayerSeason:
     self._pid = pid
     self._name = name
     self._positions = collections.defaultdict(float)
-    # Each of the following are {team: game count}
-    self._off_games = {}
-    self._def_games = {}
-    self._kck_games = {}
+    self._teams = collections.defaultdict(float)
     self._stats = collections.defaultdict(float)
   
   @property
@@ -188,33 +162,12 @@ class PlayerSeason:
   def add_row(self, row: dict[str, str]):
     """Add per-team season-long off/def/kick statistics for a player."""
     pos = row[POSITION_COLUMN]
-    self._positions[pos] += (
-      common.empty_float(row.get("games", "0")) +
-      common.empty_float(row.get("def_games", "0")) +
-      common.empty_float(row.get("kck_games", "0"))
-    )
-    team = None
-    if "recent_team" in row:
-      team = row["recent_team"]
-    elif "team" in row:
-      team = row["team"]
-    else:
-      raise ValueError(f"No team for {self._pid}")
-    # TODO: Refactor
-    if "games" in row:
-      if team in self._off_games:
-        raise ValueError(f"Multiple insertion, offense, {team}, {self._pid}")
-      self._off_games[team] = common.empty_float(row["games"])
-    elif "def_games" in row:
-      if team in self._def_games:
-        raise ValueError(f"Multiple insertion, defense, {team}, {self._pid}")
-      self._def_games[team] = common.empty_float(row["def_games"])
-    elif "kck_games" in row:
-      if team in self._kck_games:
-        raise ValueError(f"Multiple insertion, kicking, {team}, {self._pid}")
-      self._kck_games[team] = common.empty_float(row["kck_games"])
-    else:
-      raise ValueError(f"No games count for {self._pid}")
+    self._positions[pos] += common.empty_float(row.get("games", "0"))
+    # TODO: Bring back OFF, DEF, KCK game count?
+    team = row["recent_team"]
+    if team in self._teams:
+      raise ValueError(f"Multiple insertion, {team}, {self._pid}")
+    self._teams[team] = common.empty_float(row["games"])
     for stat in SEASON_STAT_FEATURES:
       if stat not in row:
         continue
@@ -249,8 +202,7 @@ class PlayerSeason:
     yield from (self._stats.get(stat, 0.0) for stat in SEASON_STAT_FEATURES)
   
   def _team_features(self) -> Iterator[float]:
-    for role_games in (self._off_games, self._def_games, self._kck_games):
-      yield from (role_games.get(team, 0.0) for team in common.TEAMS)
+    yield from (self._teams.get(team, 0.0) for team in common.TEAMS)
   
   def _position_features(self) -> Iterator[float]:
     yield from (self._positions[pos] for pos in common.POSITIONS)
@@ -269,17 +221,10 @@ class PlayerSeason:
 class SeasonStats:
   """Stats for the full league of players, for one season."""
 
-  def __init__(self, season: SeasonFiles, season_type: str):
+  def __init__(self, season_csv: str):
     self._players: dict[str, PlayerSeason] = {}
-    self._add_file(filename=season.offense_csv, season_type=season_type)
-    self._add_file(filename=season.defense_csv, season_type=season_type)
-    self._add_file(filename=season.kicking_csv, season_type=season_type)
-
-  def _add_file(self, filename: str, season_type: str):
-    with open(filename, "rt") as infile:
+    with open(season_csv, "rt") as infile:
       for row in csv.DictReader(infile):
-        if row.get("season_type") != season_type:
-          continue
         pid = row[PID_COLUMN]
         name = row[NAME_COLUMN]
         if pid not in self._players:
