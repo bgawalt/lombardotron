@@ -54,3 +54,28 @@ ok, set em up, knock em down.
 I will hold out on refactoring the `def_`, `kck_` etc particulars, and instead
 try a regularized quadratic kernel.  If it's not any better than the linear
 model, *then* I might go back and manually add interaction terms.
+
+Oh noooooo the results are terrible.  The model thinks it's fit well:
+
+```
+Train feature matrix shape: (5824, 163)
+OLS R-squared: 0.687
+```
+
+but it's ranking the wrong positions way up top
+
+```
+pid,full_name,position,team,predicted_idp,drafted,short_name
+00-0036224,Jonathan Greenard,LB,PHI,487.755,,J.Greenard
+00-0036290,Cole Kmet,TE,CHI,458.863,,C.Kmet
+00-0034361,Justin Reid,DB,NO,409.336,,J.Reid
+00-0037364,Arron Mosby,LB,GB,389.151,,A.Mosby
+00-0040236,Kyle Monangai,RB,CHI,372.806,,K.Monangai
+00-0040105,Jayson Jones,DL,TB,362.957,,J.Jones
+00-0036281,C.J. Henderson,DB,ATL,362.669,,C.Henderson
+00-0036423,Albert Okwuegbunam,TE,LV,362.064,,A.Okwuegbunam
+00-0038046,Charlie Kolar,TE,LAC,356.460,,C.Kolar
+```
+
+This was a bug due to not pointing at the right matrix for prediction; it's
+fixed now.  I should make this more robust.

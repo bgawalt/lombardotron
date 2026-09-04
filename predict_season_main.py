@@ -247,11 +247,11 @@ def main():
   rdg = linear_model.LinearRegression()
   rdg.fit(train.features, train.labels, train.weights)
   print(f"OLS R-squared: {rdg.score(train.features, train.labels, sample_weight=train.weights):0.3f}")
-  print(s25_from_s24.features.shape)
+  print(s26_from_s25.features.shape)
   print(rdg.coef_.shape)
 
   # Save predictions:
-  preds = rdg.predict(s25_from_s24.features)
+  preds = rdg.predict(s26_from_s25.features)
   ranking_fields = [
     "pid",
     "full_name",
@@ -265,9 +265,9 @@ def main():
     writer = csv.DictWriter(rankfile, fieldnames=ranking_fields)
     writer.writeheader()
     pid_pred_pairs = sorted(
-      zip(s25_from_s24.pids, preds), key=lambda t: t[1], reverse=True)
+      zip(s26_from_s25.pids, preds), key=lambda t: t[1], reverse=True)
     for pid, pred in pid_pred_pairs:
-      player = r25.players[pid]
+      player = r26.players[pid]
       writer.writerow({
         "pid": pid,
         "full_name": player.name,
