@@ -196,7 +196,7 @@ class PlayerSeason:
 
     This function weights each player based on that threshold of 100 IDP points.
     """
-    return max(self.idp_score()/100, 1.0)
+    return max(self.idp_score() / 100, 1.0)
 
   def _numeric_features(self) -> Iterator[float]:
     yield from (self._stats.get(stat, 0.0) for stat in SEASON_STAT_FEATURES)
